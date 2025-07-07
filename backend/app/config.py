@@ -1,6 +1,6 @@
 import os
 from pydantic_settings import BaseSettings
-from typing import Optional
+from typing import Optional, List
 
 class Settings(BaseSettings):
     # Основные настройки
@@ -23,10 +23,10 @@ class Settings(BaseSettings):
     # Загрузка файлов
     upload_dir: str = "uploads"
     max_file_size: int = 10 * 1024 * 1024  # 10MB
-    allowed_file_types: list = ["image/jpeg", "image/png", "image/gif"]
+    allowed_file_types: List[str] = ["image/jpeg", "image/png", "image/gif"]
     
     # CORS
-    cors_origins: list = ["*"]
+    cors_origins: List[str] = ["*"]
     
     # Логирование
     log_level: str = "INFO"
@@ -69,9 +69,22 @@ def validate_settings():
     if missing_settings:
         raise ValueError(f"Отсутствуют обязательные настройки: {', '.join(missing_settings)}")
 
+# Валидация настроек безопасности
+def validate_security_settings():
+    """Проверка настроек безопасности"""
+    if settings.secret_key == "your-secret-key-here":
+        print("ВНИМАНИЕ: Используется стандартный secret_key. Измените его в продакшене!")
+    
+    if settings.debug:
+        print("ВНИМАНИЕ: Режим отладки включен. Отключите в продакшене!")
+    
+    if "*" in settings.cors_origins:
+        print("ВНИМАНИЕ: CORS настроен на все домены. Ограничьте в продакшене!")
+
 # Валидация настроек при импорте
 try:
     validate_settings()
+    validate_security_settings()
 except ValueError as e:
     print(f"Ошибка конфигурации: {e}")
     print("Убедитесь, что все обязательные переменные окружения установлены") 

@@ -1,5 +1,12 @@
 import { ERROR_MESSAGES, APP_CONFIG } from '../../config/constants.js';
 
+// Функция для безопасного экранирования HTML
+const escapeHtml = (text) => {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+};
+
 // Утилиты для валидации и обработки ошибок
 export const Utils = {
     // Валидация полей
@@ -64,18 +71,31 @@ export const Utils = {
         }
     },
     
-    // Показ уведомлений
+    // Показ уведомлений (исправлено для безопасности)
     showNotification: (title, message, type = 'info', duration = APP_CONFIG.NOTIFICATION_DURATION) => {
         const notification = document.createElement('div');
         notification.className = `notification alert-${type}`;
         
-        notification.innerHTML = `
-            <div class="notification-header">
-                <div class="notification-title">${title}</div>
-                <button class="notification-close">&times;</button>
-            </div>
-            <div class="notification-message">${message}</div>
-        `;
+        // Безопасное создание HTML с экранированием
+        const titleElement = document.createElement('div');
+        titleElement.className = 'notification-title';
+        titleElement.textContent = title;
+        
+        const closeButton = document.createElement('button');
+        closeButton.className = 'notification-close';
+        closeButton.textContent = '×';
+        
+        const messageElement = document.createElement('div');
+        messageElement.className = 'notification-message';
+        messageElement.textContent = message;
+        
+        const headerElement = document.createElement('div');
+        headerElement.className = 'notification-header';
+        headerElement.appendChild(titleElement);
+        headerElement.appendChild(closeButton);
+        
+        notification.appendChild(headerElement);
+        notification.appendChild(messageElement);
         
         const notificationsContainer = document.getElementById('notifications');
         if (notificationsContainer) {
@@ -97,7 +117,7 @@ export const Utils = {
         }
         
         // Обработчик закрытия
-        notification.querySelector('.notification-close').addEventListener('click', () => {
+        closeButton.addEventListener('click', () => {
             Utils.hideNotification(notification);
         });
         
@@ -317,17 +337,27 @@ export function showNotification(message, type = 'info', duration = 5000) {
         notification.remove();
     });
 
-    // Создаем новое уведомление
+    // Создаем новое уведомление безопасно
     const notification = document.createElement('div');
     notification.className = `app-notification ${type}`;
-    notification.innerHTML = `
-        <div class="notification-content">
-            <div class="notification-message">${message}</div>
-            <button class="notification-close" onclick="this.parentElement.parentElement.remove()">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-    `;
+    
+    const content = document.createElement('div');
+    content.className = 'notification-content';
+    
+    const messageElement = document.createElement('div');
+    messageElement.className = 'notification-message';
+    messageElement.textContent = message;
+    
+    const closeButton = document.createElement('button');
+    closeButton.className = 'notification-close';
+    closeButton.innerHTML = '<i class="fas fa-times"></i>';
+    closeButton.addEventListener('click', () => {
+        notification.remove();
+    });
+    
+    content.appendChild(messageElement);
+    content.appendChild(closeButton);
+    notification.appendChild(content);
 
     // Добавляем в DOM
     document.body.appendChild(notification);
@@ -361,26 +391,42 @@ export function showConfirmDialog(title, message, confirmText = 'Подтвер�
     return new Promise((resolve) => {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>${title}</h3>
-                </div>
-                <div class="modal-body">
-                    <p>${message}</p>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary cancel-btn">${cancelText}</button>
-                    <button class="btn btn-primary confirm-btn">${confirmText}</button>
-                </div>
-            </div>
-        `;
+        
+        const content = document.createElement('div');
+        content.className = 'modal-content';
+        
+        const header = document.createElement('div');
+        header.className = 'modal-header';
+        const titleElement = document.createElement('h3');
+        titleElement.textContent = title;
+        header.appendChild(titleElement);
+        
+        const body = document.createElement('div');
+        body.className = 'modal-body';
+        const messageElement = document.createElement('p');
+        messageElement.textContent = message;
+        body.appendChild(messageElement);
+        
+        const footer = document.createElement('div');
+        footer.className = 'modal-footer';
+        
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn btn-secondary cancel-btn';
+        cancelBtn.textContent = cancelText;
+        
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className = 'btn btn-primary confirm-btn';
+        confirmBtn.textContent = confirmText;
+        
+        footer.appendChild(cancelBtn);
+        footer.appendChild(confirmBtn);
+        
+        content.appendChild(header);
+        content.appendChild(body);
+        content.appendChild(footer);
+        modal.appendChild(content);
 
         document.body.appendChild(modal);
-
-        // Обработчики кнопок
-        const confirmBtn = modal.querySelector('.confirm-btn');
-        const cancelBtn = modal.querySelector('.cancel-btn');
 
         const cleanup = () => {
             modal.remove();
@@ -414,12 +460,19 @@ export function showConfirmDialog(title, message, confirmText = 'Подтвер�
 export function showLoadingModal(message = 'Загрузка...') {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
-    modal.innerHTML = `
-        <div class="modal-content loading-modal">
-            <div class="loader"></div>
-            <p>${message}</p>
-        </div>
-    `;
+    
+    const content = document.createElement('div');
+    content.className = 'modal-content loading-modal';
+    
+    const loader = document.createElement('div');
+    loader.className = 'loader';
+    
+    const messageElement = document.createElement('p');
+    messageElement.textContent = message;
+    
+    content.appendChild(loader);
+    content.appendChild(messageElement);
+    modal.appendChild(content);
 
     document.body.appendChild(modal);
 

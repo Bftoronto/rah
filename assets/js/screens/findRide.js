@@ -89,8 +89,6 @@ class FindRideScreen {
     }
     
     setupEventHandlers() {
-        console.log('FindRideScreen: настройка обработчиков событий');
-        
         // Обработчик кнопки поиска
         const findBtn = document.getElementById('findRideBtn');
         if (findBtn) {
@@ -101,7 +99,6 @@ class FindRideScreen {
         const dateInput = document.getElementById('dateInput');
         if (dateInput) {
             dateInput.addEventListener('click', () => {
-                console.log('Клик по dateInput - открытие календаря');
                 window.router.navigate('dateSelection');
             });
         }
@@ -169,8 +166,6 @@ class FindRideScreen {
     
     // Обработка поиска
     async handleSearch() {
-        console.log('FindRideScreen: обработка поиска');
-        
         Utils.clearFormErrors();
         
         const formData = this.getFormData();
@@ -218,7 +213,6 @@ class FindRideScreen {
     // Очистка экрана
     destroy() {
         // Удаляем обработчики событий при необходимости
-        console.log('FindRideScreen: очистка экрана');
     }
 }
 

@@ -1,7 +1,7 @@
 import { stateManager } from './state.js';
 import { Utils } from './utils.js';
 import { API } from './api.js';
-import { router } from './router.js';
+import { router, Router } from './router.js';
 
 class App {
     constructor() {
@@ -10,8 +10,6 @@ class App {
     }
 
     async init() {
-        console.log('Инициализация приложения...');
-        
         try {
             // Инициализация Telegram Web App
             this.initTelegramWebApp();
@@ -32,7 +30,6 @@ class App {
             await this.loadInitialData();
             
             this.initialized = true;
-            console.log('Приложение успешно инициализировано');
             
         } catch (error) {
             console.error('Ошибка инициализации приложения:', error);
@@ -45,7 +42,6 @@ class App {
             const tg = window.Telegram.WebApp;
             tg.expand();
             tg.enableClosingConfirmation();
-            console.log('Telegram Web App инициализирован');
         } else {
             console.warn('Telegram Web App не найден');
         }
@@ -56,8 +52,6 @@ class App {
         window.utils = Utils;
         window.api = API;
         window.router = this.router;
-        
-        console.log('Глобальные объекты инициализированы');
     }
 
     initRouter() {
@@ -65,10 +59,8 @@ class App {
         window.router = this.router;
         
         // Добавляем middleware
-        this.router.use(router.constructor.authMiddleware);
-        this.router.use(router.constructor.loggingMiddleware);
-        
-        console.log('Роутер инициализирован');
+        this.router.use(Router.authMiddleware);
+        this.router.use(Router.loggingMiddleware);
     }
 
     initBottomNavigation() {
@@ -85,8 +77,6 @@ class App {
                 this.handleNavigation(screenId);
             });
         });
-        
-        console.log('Нижняя навигация инициализирована');
     }
 
     async handleNavigation(screenId) {
@@ -134,16 +124,9 @@ class App {
                 }
             });
         }
-        
-        console.log('Уведомления инициализированы');
     }
 
     async loadInitialData() {
-        console.log('Загрузка начальных данных...');
-        
-        // Показываем экран загрузки
-        await this.router.navigate('loading', 'Загрузка данных...');
-        
         try {
             // Проверяем, авторизован ли пользователь через Telegram
             if (window.Telegram && window.Telegram.WebApp) {
@@ -159,20 +142,14 @@ class App {
                         const user = verificationResult.user;
                         stateManager.updateUserData(user);
                         
-                        console.log('Пользователь найден:', user);
-                        
                         // Определяем начальный экран
                         if (user.balance <= 0) {
-                            console.log('Баланс <= 0, показываем экран ограничения');
                             await this.router.navigate('restricted');
                         } else {
-                            console.log('Баланс > 0, показываем экран поиска');
                             await this.router.navigate('findRide');
                         }
                     } else {
                         // Пользователь не найден, начинаем регистрацию
-                        console.log('Пользователь не найден, начинаем регистрацию');
-                        
                         // Сохраняем данные Telegram для регистрации
                         stateManager.setState('registrationData', {
                             telegramData: verificationResult.telegram_data
@@ -182,12 +159,10 @@ class App {
                     }
                 } else {
                     // Нет данных Telegram, показываем экран ограничения
-                    console.log('Нет данных Telegram, показываем экран ограничения');
                     await this.router.navigate('restricted');
                 }
             } else {
                 // Telegram Web App не доступен
-                console.log('Telegram Web App не доступен, показываем экран ограничения');
                 await this.router.navigate('restricted');
             }
             
@@ -201,18 +176,39 @@ class App {
     showErrorScreen() {
         const appContent = document.getElementById('appContent');
         if (appContent) {
-            appContent.innerHTML = `
-                <div class="text-center p-20">
-                    <div class="mb-20" style="font-size: 48px; color: #f44336;">
-                        <i class="fas fa-exclamation-triangle"></i>
-                    </div>
-                    <h2 class="section-title">Ошибка загрузки</h2>
-                    <p class="mt-10">Не удалось загрузить приложение</p>
-                    <button class="btn btn-primary mt-20" onclick="location.reload()">
-                        Попробовать снова
-                    </button>
-                </div>
-            `;
+            // Безопасное создание HTML для экрана ошибки
+            const errorContainer = document.createElement('div');
+            errorContainer.className = 'text-center p-20';
+            
+            const errorIcon = document.createElement('div');
+            errorIcon.className = 'mb-20';
+            errorIcon.style.fontSize = '48px';
+            errorIcon.style.color = '#f44336';
+            errorIcon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+            
+            const errorTitle = document.createElement('h2');
+            errorTitle.className = 'section-title';
+            errorTitle.textContent = 'Ошибка загрузки';
+            
+            const errorMessage = document.createElement('p');
+            errorMessage.className = 'mt-10';
+            errorMessage.textContent = 'Не удалось загрузить приложение';
+            
+            const retryButton = document.createElement('button');
+            retryButton.className = 'btn btn-primary mt-20';
+            retryButton.textContent = 'Попробовать снова';
+            retryButton.addEventListener('click', () => {
+                location.reload();
+            });
+            
+            errorContainer.appendChild(errorIcon);
+            errorContainer.appendChild(errorTitle);
+            errorContainer.appendChild(errorMessage);
+            errorContainer.appendChild(retryButton);
+            
+            // Очищаем содержимое и добавляем безопасный HTML
+            appContent.innerHTML = '';
+            appContent.appendChild(errorContainer);
         }
     }
 
@@ -250,7 +246,6 @@ const app = new App();
 
 // Инициализация приложения при загрузке DOM
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM загружен, начинаю инициализацию приложения');
     app.init();
 });
 

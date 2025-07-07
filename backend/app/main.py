@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import logging
 import os
+import sys
 
 from .config import settings
 from .database import init_db, check_db_connection
@@ -60,28 +61,29 @@ async def startup_event():
     """Событие запуска приложения"""
     logger.info("Запуск приложения...")
     
-    # Проверка подключения к базе данных
-    if not check_db_connection():
-        logger.error("Не удалось подключиться к базе данных")
-        raise HTTPException(status_code=500, detail="Database connection failed")
-    
-    # Инициализация базы данных
     try:
+        # Проверка подключения к базе данных
+        if not check_db_connection():
+            logger.error("Не удалось подключиться к базе данных")
+            raise HTTPException(status_code=500, detail="Database connection failed")
+        
+        # Инициализация базы данных
         init_db()
         logger.info("База данных инициализирована")
+        
+        logger.info("Приложение успешно запущено")
+        
     except Exception as e:
-        logger.error(f"Ошибка инициализации базы данных: {e}")
-        raise HTTPException(status_code=500, detail="Database initialization failed")
-    
-    logger.info("Приложение успешно запущено")
+        logger.error(f"Критическая ошибка при запуске: {e}")
+        sys.exit(1)
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Событие остановки приложения"""
     logger.info("Остановка приложения...")
     
-    # Закрытие сессии уведомлений
     try:
+        # Закрытие сессии уведомлений
         from .services.notification_service import notification_service
         await notification_service.close_session()
         logger.info("Сессия уведомлений закрыта")
@@ -100,13 +102,21 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Проверка здоровья приложения"""
-    db_status = check_db_connection()
-    
-    return {
-        "status": "healthy" if db_status else "unhealthy",
-        "database": "connected" if db_status else "disconnected",
-        "version": settings.version
-    }
+    try:
+        db_status = check_db_connection()
+        
+        return {
+            "status": "healthy" if db_status else "unhealthy",
+            "database": "connected" if db_status else "disconnected",
+            "version": settings.version
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "version": settings.version
+        }
 
 @app.get("/api/info")
 async def api_info():

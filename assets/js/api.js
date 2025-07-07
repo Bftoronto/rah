@@ -50,7 +50,11 @@ export const API = {
             const response = await fetch(url, config);
             
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorData = await response.json().catch(() => ({}));
+                const error = new Error(`HTTP error! status: ${response.status}`);
+                error.response = response;
+                error.data = errorData;
+                throw error;
             }
             
             return await response.json();

@@ -197,25 +197,44 @@ export class StateManager {
         });
     }
     
-    // Сохранение состояния в localStorage
+    // Сохранение состояния в localStorage с валидацией
     saveToStorage() {
         try {
-            localStorage.setItem('pax-app-state', JSON.stringify(this.state));
+            // Проверяем размер данных перед сохранением
+            const stateString = JSON.stringify(this.state);
+            if (stateString.length > 1024 * 1024) { // 1MB лимит
+                console.warn('State too large, truncating...');
+                // Удаляем большие объекты
+                const truncatedState = { ...this.state };
+                delete truncatedState.images;
+                delete truncatedState.chat;
+                localStorage.setItem('pax-app-state', JSON.stringify(truncatedState));
+            } else {
+                localStorage.setItem('pax-app-state', stateString);
+            }
         } catch (error) {
             console.error('Error saving state to storage:', error);
         }
     }
     
-    // Загрузка состояния из localStorage
+    // Загрузка состояния из localStorage с валидацией
     loadFromStorage() {
         try {
             const savedState = localStorage.getItem('pax-app-state');
             if (savedState) {
                 const parsedState = JSON.parse(savedState);
-                this.updateState(parsedState);
+                
+                // Валидация загруженных данных
+                if (parsedState && typeof parsedState === 'object') {
+                    this.updateState(parsedState);
+                } else {
+                    console.warn('Invalid state data in storage, using defaults');
+                }
             }
         } catch (error) {
             console.error('Error loading state from storage:', error);
+            // Очищаем поврежденные данные
+            localStorage.removeItem('pax-app-state');
         }
     }
     

@@ -4,12 +4,39 @@ from datetime import datetime, date
 import re
 
 class UserBase(BaseModel):
+    id: Optional[int] = None  # Для совместимости с фронтендом
     telegram_id: str
     phone: str
     full_name: str
+    name: Optional[str] = None  # Для совместимости с фронтендом
+    balance: int = 500  # Для совместимости с фронтендом
+    reviews: int = 0  # Для совместимости с фронтендом
     birth_date: date
     city: str
     avatar_url: Optional[str] = None
+    avatar: Optional[str] = None  # Для совместимости с фронтендом
+    verified: dict = {}  # Для совместимости с фронтендом
+    car: dict = {}  # Для совместимости с фронтендом
+    average_rating: float = 0.0  # Для совместимости с фронтендом
+    rating: int = 0  # Для совместимости с фронтендом
+    total_rides: int = 0  # Для совместимости с фронтендом
+    cancelled_rides: int = 0  # Для совместимости с фронтендом
+    profile_history: Optional[list] = []  # Для совместимости с фронтендом
+    is_active: bool = True  # Для совместимости с фронтендом
+    is_verified: bool = False  # Для совместимости с фронтендом
+    is_driver: bool = False  # Для совместимости с фронтендом
+    privacy_policy_version: str = "1.1"  # Для совместимости с фронтендом
+    privacy_policy_accepted: bool = False  # Для совместимости с фронтендом
+    privacy_policy_accepted_at: Optional[datetime] = None  # Для совместимости с фронтендом
+    car_brand: Optional[str] = None  # Для совместимости с фронтендом
+    car_model: Optional[str] = None  # Для совместимости с фронтендом
+    car_year: Optional[int] = None  # Для совместимости с фронтендом
+    car_color: Optional[str] = None  # Для совместимости с фронтендом
+    driver_license_number: Optional[str] = None  # Для совместимости с фронтендом
+    driver_license_photo_url: Optional[str] = None  # Для совместимости с фронтендом
+    car_photo_url: Optional[str] = None  # Для совместимости с фронтендом
+    created_at: Optional[datetime] = None  # Для совместимости с фронтендом
+    updated_at: Optional[datetime] = None  # Для совместимости с фронтендом
     
     @validator('phone')
     def validate_phone(cls, v):
@@ -53,7 +80,33 @@ class DriverData(BaseModel):
         return v
 
 class UserCreate(UserBase):
+    id: Optional[int] = None  # Для совместимости с фронтендом
+    name: Optional[str] = None  # Для совместимости с фронтендом
+    balance: int = 500  # Для совместимости с фронтендом
+    reviews: int = 0  # Для совместимости с фронтендом
+    rating: int = 0  # Для совместимости с фронтендом
+    verified: dict = {}  # Для совместимости с фронтендом
+    car: dict = {}  # Для совместимости с фронтендом
+    avatar: Optional[str] = None  # Для совместимости с фронтендом
+    average_rating: float = 0.0  # Для совместимости с фронтендом
+    total_rides: int = 0  # Для совместимости с фронтендом
+    cancelled_rides: int = 0  # Для совместимости с фронтендом
+    profile_history: Optional[list] = []  # Для совместимости с фронтендом
+    is_active: bool = True  # Для совместимости с фронтендом
+    is_verified: bool = False  # Для совместимости с фронтендом
+    is_driver: bool = False  # Для совместимости с фронтендом
+    privacy_policy_version: str = "1.1"  # Для совместимости с фронтендом
     privacy_policy_accepted: bool = False
+    privacy_policy_accepted_at: Optional[datetime] = None  # Для совместимости с фронтендом
+    car_brand: Optional[str] = None  # Для совместимости с фронтендом
+    car_model: Optional[str] = None  # Для совместимости с фронтендом
+    car_year: Optional[int] = None  # Для совместимости с фронтендом
+    car_color: Optional[str] = None  # Для совместимости с фронтендом
+    driver_license_number: Optional[str] = None  # Для совместимости с фронтендом
+    driver_license_photo_url: Optional[str] = None  # Для совместимости с фронтендом
+    car_photo_url: Optional[str] = None  # Для совместимости с фронтендом
+    created_at: Optional[datetime] = None  # Для совместимости с фронтендом
+    updated_at: Optional[datetime] = None  # Для совместимости с фронтендом
     driver_data: Optional[DriverData] = None
     
     @validator('privacy_policy_accepted')
@@ -63,11 +116,19 @@ class UserCreate(UserBase):
         return v
 
 class UserUpdate(BaseModel):
+    id: Optional[int] = None  # Для совместимости с фронтендом
+    name: Optional[str] = None  # Для совместимости с фронтендом
     phone: Optional[str] = None
     full_name: Optional[str] = None
     birth_date: Optional[date] = None
     city: Optional[str] = None
     avatar_url: Optional[str] = None
+    avatar: Optional[str] = None  # Для совместимости с фронтендом
+    balance: Optional[int] = None  # Для совместимости с фронтендом
+    reviews: Optional[int] = None  # Для совместимости с фронтендом
+    rating: Optional[int] = None  # Для совместимости с фронтендом
+    verified: Optional[dict] = None  # Для совместимости с фронтендом
+    car: Optional[dict] = None  # Для совместимости с фронтендом
     driver_data: Optional[DriverData] = None
     
     @validator('phone')
@@ -81,6 +142,12 @@ class UserUpdate(BaseModel):
 
 class UserRead(UserBase):
     id: int
+    name: Optional[str] = None  # Для совместимости с фронтендом
+    balance: int = 500  # Для совместимости с фронтендом
+    reviews: int = 0  # Для совместимости с фронтендом
+    avatar: Optional[str] = None  # Для совместимости с фронтендом
+    verified: dict = {}  # Для совместимости с фронтендом
+    car: dict = {}  # Для совместимости с фронтендом
     is_active: bool
     is_verified: bool
     is_driver: bool
@@ -96,9 +163,11 @@ class UserRead(UserBase):
     car_photo_url: Optional[str]
     created_at: datetime
     updated_at: datetime
+    average_rating: float = 0.0
     rating: int
     total_rides: int
     cancelled_rides: int
+    profile_history: Optional[list] = []
 
     class Config:
         orm_mode = True

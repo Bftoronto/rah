@@ -1,9 +1,9 @@
 # Models package init 
 from .user import User, ProfileChangeLog
 from .ride import Ride
-from .chat import Message, ChatRoom
-from .payment import Payment, PaymentMethod
+from .chat import Chat, ChatMessage
+from .payment import Payment
 from .upload import Upload
 from .notification import NotificationLog, NotificationSettings
-from .moderation import Complaint, ModerationAction, ModerationRule, ContentFilter, UserTrust
-from .rating import Rating, Review 
+from .moderation import ModerationReport, ModerationAction, ModerationRule, ContentFilter, TrustScore
+from .rating import Rating, Review

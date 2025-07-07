@@ -38,8 +38,6 @@ class Router {
     
     // Навигация к экрану
     async navigate(screenName, data = null) {
-        console.log(`Router: переход к экрану ${screenName}`, data);
-        
         // Проверяем существование экрана через screens объект, а не Map
         if (!screens[screenName]) {
             console.error(`Экран ${screenName} не найден`);
@@ -50,7 +48,6 @@ class Router {
         for (const middleware of this.middlewares) {
             const result = await middleware(screenName, data);
             if (result === false) {
-                console.log(`Middleware заблокировал переход к ${screenName}`);
                 return;
             }
         }
@@ -77,25 +74,53 @@ class Router {
         if (appContent) {
             try {
                 const html = screenInstance.render(data);
-                appContent.innerHTML = html;
+                // Безопасная установка HTML с проверкой
+                if (typeof html === 'string' && html.trim()) {
+                    appContent.innerHTML = html;
+                } else {
+                    console.warn(`Экран ${screenName} вернул пустой HTML`);
+                    appContent.innerHTML = '';
+                }
                 
                 // Устанавливаем обработчики событий
                 setTimeout(() => {
                     screenInstance.setupEventHandlers();
                 }, 0);
                 
-                console.log(`Экран ${screenName} успешно отрендерен`);
             } catch (error) {
                 console.error(`Ошибка при рендеринге экрана ${screenName}:`, error);
-                appContent.innerHTML = `
-                    <div class="text-center p-20">
-                        <h2>Ошибка</h2>
-                        <p>Не удалось загрузить экран</p>
-                        <button class="btn btn-primary mt-20" onclick="window.router.navigate('findRide')">
-                            Вернуться к поиску
-                        </button>
-                    </div>
-                `;
+                
+                // Безопасное создание HTML для ошибки
+                const errorContainer = document.createElement('div');
+                errorContainer.className = 'text-center p-20';
+                
+                const errorIcon = document.createElement('div');
+                errorIcon.className = 'mb-20';
+                errorIcon.style.fontSize = '48px';
+                errorIcon.style.color = '#f44336';
+                errorIcon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                
+                const errorTitle = document.createElement('h2');
+                errorTitle.textContent = 'Ошибка';
+                
+                const errorMessage = document.createElement('p');
+                errorMessage.textContent = 'Не удалось загрузить экран';
+                
+                const backButton = document.createElement('button');
+                backButton.className = 'btn btn-primary mt-20';
+                backButton.textContent = 'Вернуться к поиску';
+                backButton.addEventListener('click', () => {
+                    window.router.navigate('findRide');
+                });
+                
+                errorContainer.appendChild(errorIcon);
+                errorContainer.appendChild(errorTitle);
+                errorContainer.appendChild(errorMessage);
+                errorContainer.appendChild(backButton);
+                
+                // Очищаем содержимое и добавляем безопасный HTML
+                appContent.innerHTML = '';
+                appContent.appendChild(errorContainer);
             }
         }
     }
@@ -155,8 +180,6 @@ class Router {
     
     // Инициализация маршрутизатора
     init() {
-        console.log('Router: инициализация');
-        
         // Регистрируем все экраны напрямую через статический импорт
         Object.keys(screens).forEach(screenName => {
             this.screens.set(screenName, screens[screenName]);
@@ -167,8 +190,6 @@ class Router {
         
         // Загружаем сохраненное состояние
         stateManager.loadFromStorage();
-        
-        console.log('Router инициализирован');
     }
     
     // Настройка навигации по нижнему меню
@@ -227,7 +248,6 @@ class Router {
     
     // Middleware для логирования
     static loggingMiddleware(screenName, data) {
-        console.log(`Переход к экрану: ${screenName}`, data);
         return true;
     }
 }

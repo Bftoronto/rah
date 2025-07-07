@@ -1,13 +1,12 @@
 from sqlalchemy.orm import Session
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Depends
 from datetime import datetime
 import logging
 from typing import Optional, Dict, Any
-
+from ..database import get_db
 from ..models.user import User, ProfileChangeLog
 from ..schemas.user import UserCreate, UserUpdate, UserRead, PrivacyPolicyAccept
-from ..utils.security import verify_telegram_data, verify_token
-from fastapi import Depends, HTTPException, status
+from ..utils.security import verify_telegram_data
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 logger = logging.getLogger(__name__)
@@ -307,5 +306,3 @@ def get_current_user(
         )
 
 
-# Добавляем импорт для get_db
-from ..database import get_db
