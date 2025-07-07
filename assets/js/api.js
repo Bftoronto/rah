@@ -1,13 +1,43 @@
 import { Utils } from './utils.js';
 
+// Конфигурация API
+const API_CONFIG = {
+    // Локальная разработка
+    development: {
+        baseURL: 'http://localhost:8000',
+        timeout: 10000
+    },
+    // GitHub Pages (демо)
+    production: {
+        baseURL: 'https://rah.pages.dev/api',
+        timeout: 15000
+    },
+    // Telegram Mini App
+    telegram: {
+        baseURL: 'https://your-backend-domain.com/api',
+        timeout: 10000
+    }
+};
+
+// Определение окружения
+const getEnvironment = () => {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'development';
+    } else if (window.location.hostname === 'rah.pages.dev') {
+        return 'production';
+    } else if (window.Telegram && window.Telegram.WebApp) {
+        return 'telegram';
+    }
+    return 'production';
+};
+
+const currentConfig = API_CONFIG[getEnvironment()];
+
 // API клиент для работы с сервером
 export const API = {
-    // Базовый URL API
-    baseURL: 'http://localhost:8000/api', // Для локальной разработки FastAPI
-    
     // Общий метод для запросов
     async request(endpoint, options = {}) {
-        const url = `${this.baseURL}${endpoint}`;
+        const url = `${currentConfig.baseURL}${endpoint}`;
         const config = {
             headers: {
                 'Content-Type': 'application/json',
