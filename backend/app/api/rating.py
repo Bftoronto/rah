@@ -9,7 +9,6 @@ from app.schemas.rating import (
     RatingStatisticsResponse, RideRatingsResponse
 )
 from app.utils.security import get_current_user_id
-from app.utils.validators import validate_telegram_id
 
 router = APIRouter(prefix="/rating", tags=["rating"])
 
