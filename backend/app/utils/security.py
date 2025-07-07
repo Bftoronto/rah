@@ -4,6 +4,7 @@ import hmac
 import os
 from typing import Dict, Any
 import logging
+from fastapi import Depends, HTTPException, status
 
 logger = logging.getLogger(__name__)
 
@@ -114,4 +115,11 @@ def validate_telegram_user_data(data: Dict[str, Any]) -> bool:
         logger.warning("Некорректная дата авторизации")
         return False
     
-    return True 
+    return True
+
+def get_current_user_id():
+    """
+    Заглушка для получения текущего user_id через Depends.
+    В реальном проекте реализуй получение user_id из токена или сессии.
+    """
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Авторизация обязательна") 
