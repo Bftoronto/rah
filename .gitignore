@@ -141,4 +141,25 @@ Thumbs.db
 .idea/
 
 # Misc
-migrations/__pycache__/ 
+migrations/__pycache__/
+
+# Telegram
+telegram.log
+*.session
+*.session-journal
+
+# Mini App
+TELEGRAM_MINIAPP_SETUP.md
+
+# Инструкции и временные файлы
+*.md~
+*.tmp
+*.bak
+
+# Логи
+*.log
+backend/app.log
+
+# Локальные настройки
+backend/.env
+.env 

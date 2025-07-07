@@ -3,7 +3,7 @@ import hmac
 import time
 from typing import Dict
 
-TELEGRAM_BOT_TOKEN = "your_telegram_bot_token"  # Заменить на реальный токен
+TELEGRAM_BOT_TOKEN = "8187393599:AAEudOluahmhNJixt_hW8mvWjWC0eh1YIlA"
 
 # Проверка подписи Telegram Login
 

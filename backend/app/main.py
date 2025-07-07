@@ -24,10 +24,17 @@ app = FastAPI(
     debug=settings.debug
 )
 
-# Настройка CORS
+# Настройка CORS для Telegram Web App
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=[
+        "https://web.telegram.org",
+        "https://t.me",
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "https://localhost:3000",
+        "https://localhost:8000"
+    ] + settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
