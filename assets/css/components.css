@@ -1,0 +1,596 @@
+/* Стили компонентов */
+
+/* Модальные окна */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal {
+    background: white;
+    border-radius: 18px;
+    max-width: 90%;
+    max-height: 90%;
+    overflow: hidden;
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.show .modal {
+    transform: scale(1);
+}
+
+.modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #202124;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #5f6368;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.3s;
+}
+
+.modal-close:hover {
+    background-color: #f1f3f4;
+}
+
+.modal-body {
+    padding: 20px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    padding: 16px 20px;
+    border-top: 1px solid #e9ecef;
+    background: #f8f9fa;
+}
+
+/* Загрузка изображений */
+.image-upload {
+    border: 2px dashed #dadce0;
+    border-radius: 18px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.3s, background-color 0.3s;
+    position: relative;
+    overflow: hidden;
+}
+
+.image-upload:hover {
+    border-color: #f65446;
+    background-color: #fff5f5;
+}
+
+.image-upload input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.upload-icon {
+    font-size: 48px;
+    color: #dadce0;
+    margin-bottom: 16px;
+}
+
+.upload-text {
+    color: #5f6368;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.upload-text small {
+    color: #9aa0a6;
+    font-size: 14px;
+}
+
+.image-preview {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 12px;
+    margin: 16px 0;
+    display: none;
+}
+
+.image-preview.show {
+    display: block;
+}
+
+.upload-progress {
+    height: 4px;
+    background: #e9ecef;
+    border-radius: 2px;
+    margin: 16px 0;
+    overflow: hidden;
+    display: none;
+}
+
+.upload-progress.show {
+    display: block;
+}
+
+.upload-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #f65446, #e53e3e);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+/* Чат */
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 400px;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    background: #f8f9fa;
+}
+
+.chat-message {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: flex-end;
+}
+
+.chat-message.sent {
+    justify-content: flex-end;
+}
+
+.chat-message.received {
+    justify-content: flex-start;
+}
+
+.message-bubble {
+    max-width: 70%;
+    padding: 12px 16px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+
+.message-bubble.sent {
+    background: #f65446;
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+.message-bubble.received {
+    background: white;
+    color: #202124;
+    border: 1px solid #e9ecef;
+    border-bottom-left-radius: 4px;
+}
+
+.message-time {
+    font-size: 12px;
+    color: #9aa0a6;
+    margin-top: 4px;
+    text-align: right;
+}
+
+.chat-input-container {
+    display: flex;
+    align-items: flex-end;
+    padding: 16px;
+    background: white;
+    border-top: 1px solid #e9ecef;
+    gap: 12px;
+}
+
+.chat-input {
+    flex: 1;
+    border: 1px solid #dadce0;
+    border-radius: 20px;
+    padding: 12px 16px;
+    font-size: 14px;
+    resize: none;
+    max-height: 100px;
+    min-height: 44px;
+}
+
+.chat-input:focus {
+    border-color: #f65446;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(246, 84, 70, 0.1);
+}
+
+.send-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: #f65446;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s;
+}
+
+.send-btn:hover:not(:disabled) {
+    background: #e53e3e;
+}
+
+.send-btn:disabled {
+    background: #dadce0;
+    cursor: not-allowed;
+}
+
+/* Отмена поездки */
+.cancel-reasons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.reason-btn {
+    padding: 12px 16px;
+    border: 1px solid #dadce0;
+    border-radius: 12px;
+    background: white;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 14px;
+}
+
+.reason-btn:hover {
+    border-color: #f65446;
+    background: #fff5f5;
+}
+
+.reason-btn.active {
+    border-color: #f65446;
+    background: #f65446;
+    color: white;
+}
+
+.cancel-comment {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #dadce0;
+    border-radius: 12px;
+    font-size: 14px;
+    resize: vertical;
+    min-height: 80px;
+}
+
+.cancel-comment:focus {
+    border-color: #f65446;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(246, 84, 70, 0.1);
+}
+
+/* Уведомления */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 16px 20px;
+    max-width: 300px;
+    z-index: 2000;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+}
+
+.notification.show {
+    transform: translateX(0);
+}
+
+.notification.success {
+    border-left: 4px solid #4caf50;
+}
+
+.notification.error {
+    border-left: 4px solid #f44336;
+}
+
+.notification.warning {
+    border-left: 4px solid #ff9800;
+}
+
+.notification.info {
+    border-left: 4px solid #2196f3;
+}
+
+.notification-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+.notification-message {
+    font-size: 13px;
+    color: #5f6368;
+    line-height: 1.4;
+}
+
+.notification-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    font-size: 16px;
+    color: #9aa0a6;
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.notification-close:hover {
+    background: #f1f3f4;
+}
+
+/* Toast уведомления */
+.toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 24px;
+    font-size: 14px;
+    z-index: 1500;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.toast.show {
+    opacity: 1;
+}
+
+/* Календарь */
+.calendar {
+    background: white;
+    border-radius: 18px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.calendar-nav {
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #5f6368;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.3s;
+}
+
+.calendar-nav:hover {
+    background: #f1f3f4;
+}
+
+.calendar-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #202124;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+.calendar-day {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 14px;
+}
+
+.calendar-day:hover {
+    background: #f1f3f4;
+}
+
+.calendar-day.selected {
+    background: #f65446;
+    color: white;
+}
+
+.calendar-day.today {
+    border: 2px solid #f65446;
+}
+
+.calendar-day.disabled {
+    color: #dadce0;
+    cursor: not-allowed;
+}
+
+.calendar-day.disabled:hover {
+    background: none;
+}
+
+/* Время */
+.time-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    padding: 20px;
+}
+
+.time-option {
+    padding: 16px;
+    border: 1px solid #dadce0;
+    border-radius: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.time-option:hover {
+    border-color: #f65446;
+    background: #fff5f5;
+}
+
+.time-option.selected {
+    border-color: #f65446;
+    background: #f65446;
+    color: white;
+}
+
+/* Банки */
+.bank-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.bank-item {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    border: 1px solid #dadce0;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.bank-item:hover {
+    border-color: #f65446;
+    background: #fff5f5;
+}
+
+.bank-item.selected {
+    border-color: #f65446;
+    background: #fff5f5;
+}
+
+.bank-logo {
+    width: 48px;
+    height: 32px;
+    margin-right: 16px;
+    object-fit: contain;
+}
+
+.bank-info {
+    flex: 1;
+}
+
+.bank-name {
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.bank-description {
+    font-size: 14px;
+    color: #5f6368;
+}
+
+.bank-check {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #dadce0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+}
+
+.bank-item.selected .bank-check {
+    background: #f65446;
+    border-color: #f65446;
+}
+
+/* Адаптивность */
+@media (max-width: 480px) {
+    .modal {
+        max-width: 95%;
+        max-height: 95%;
+    }
+    
+    .notification {
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+    
+    .time-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .calendar-day {
+        width: 36px;
+        height: 36px;
+        font-size: 13px;
+    }
+} 

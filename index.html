@@ -3,406 +3,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RAH - Поездки с попутчиками</title>
+    <title>PAX - Поездки с попутчиками</title>
+    
+    <!-- Внешние зависимости -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    
+    <!-- Стили приложения -->
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/components.css">
+    <link rel="stylesheet" href="assets/css/forms.css">
+    <link rel="stylesheet" href="assets/css/notifications.css">
+    <link rel="stylesheet" href="assets/css/modals.css">
+    <link rel="stylesheet" href="assets/css/rating.css">
+    
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        /* Дополнительные стили для совместимости */
+        .error-message {
+            color: #d32f2f;
+            font-size: 14px;
+            margin-top: 8px;
+            display: none;
         }
         
-        body {
-            background-color: #f5f5f5;
+        .form-control.error {
+            border-color: #d32f2f;
+            box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.1);
+        }
+        
+        .form-control.success {
+            border-color: #4caf50;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+        }
+        
+        .alert {
+            padding: 12px 16px;
+            border-radius: 18px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        
+        .alert-error {
+            background-color: #ffebee;
+            color: #d32f2f;
+            border: 1px solid #ffcdd2;
+        }
+        
+        .alert-success {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+        
+        .alert-warning {
+            background-color: #fff3e0;
+            color: #f57c00;
+            border: 1px solid #ffcc02;
+        }
+        
+        .alert-info {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #bbdefb;
+        }
+        
+        /* Баннеры */
+        .block-banner {
+            background: #faecec;
+            border-radius: 14px;
+            padding: 18px 20px 14px 20px;
+            margin-bottom: 20px;
+            position: relative;
+            border-left: 6px solid #f65446;
+        }
+        
+        .block-banner-title {
+            color: #f65446;
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .block-banner-text {
             color: #333;
-            line-height: 1.5;
-            max-width: 100%;
-            overflow-x: hidden;
+            font-size: 17px;
         }
         
-        .container {
-            max-width: 480px;
-            margin: 0 auto;
-            background: white;
-            min-height: 100vh;
+        .warn-banner {
+            background: #fff7e6;
+            border-radius: 14px;
+            padding: 18px 20px 14px 20px;
+            margin-bottom: 20px;
             position: relative;
-            padding-bottom: 60px;
+            border-left: 6px solid #fbc02d;
         }
         
-        /* Шапка */
-        .header {
-            background-color: #ffffff;
-            color: white;
-            padding: 15px;
-            text-align: center;
-            font-size: 18px;
-            font-weight: 500;
+        .warn-banner-title {
+            color: #fbc02d;
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .warn-banner-text {
+            color: #333;
+            font-size: 17px;
+        }
+        
+        .info-banner {
+            background: #eaf2fa;
+            border-radius: 14px;
+            padding: 18px 20px 14px 20px;
+            margin-bottom: 20px;
             position: relative;
+            border-left: 6px solid #4e89bf;
             display: flex;
-            justify-content: center;
-            align-items: center;
+            align-items: flex-start;
         }
         
-        .back-btn {
+        .info-banner-title {
+            color: #4e89bf;
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .info-banner-text {
+            color: #333;
+            font-size: 17px;
+        }
+        
+        .info-banner-close {
             position: absolute;
-            left: 15px;
+            top: 14px;
+            right: 16px;
+            color: #4e89bf;
+            font-size: 22px;
+            font-weight: 400;
             background: none;
             border: none;
-            color: white;
-            font-size: 20px;
             cursor: pointer;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            line-height: 1;
         }
         
-        .header-title {
-            flex-grow: 1;
-            text-align: center;
-        }
-        
-        /* Основной контент */
-        .content {
-            padding: 16px;
-        }
-        
-        .section-title {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 16px;
-            color: #202124;
-        }
-        
-        .card {
-            background: white;
-            border-radius: 18px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            margin-bottom: 16px;
-            overflow: hidden;
-        }
-        
-        .card-header {
-            padding: 12px 16px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #e9ecef;
-            font-weight: 500;
-            font-size: 16px;
-        }
-        
-        .card-body {
-            padding: 16px;
-        }
-        
-        /* Кнопки */
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 14px;
-            border-radius: 18px;
-            border: none;
-            font-size: 16px;
-            font-weight: 500;
-            text-align: center;
-            cursor: pointer;
-            margin: 10px 0;
-            transition: background 0.3s;
-        }
-        
-        .btn-primary {
-            background-color: #f65446;
-            color: white;
-        }
-        
-        .btn-secondary {
-            background-color: #f8f9fa;
-            color: #5f6368;
-            border: 1px solid #dadce0;
-        }
-        
-        .btn-outline {
-            background: transparent;
-            color: #1a73e8;
-            border: 1px solid #1a73e8;
-        }
-        
-        .btn-small {
-            padding: 8px 16px;
-            font-size: 14px;
-            width: auto;
-            display: inline-block;
-        }
-        
-        /* Формы */
-        .form-group {
-            margin-bottom: 16px;
-        }
-        
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: #5f6368;
-            font-size: 14px;
-        }
-        
-        .form-control {
-            width: 100%;
-            padding: 12px 16px;
-            border: 1px solid #dadce0;
-            border-radius: 18px;
-            font-size: 16px;
-            background: white;
-        }
-        
-        .form-control:focus {
-            border-color: #f65446;
-            outline: none;
-        }
-        
-        /* Список */
-        .list {
-            list-style: none;
-        }
-        
-        .list-item {
-            padding: 16px;
-            border-bottom: 1px solid #e9ecef;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .list-item:last-child {
-            border-bottom: none;
-        }
-        
-        /* Рейтинг */
-        .rating {
-            display: flex;
-            align-items: center;
-        }
-        
-        .stars {
-            color: #ffc107;
-            font-size: 18px;
-            margin-right: 8px;
-        }
-        
-        .rating-value {
-            font-weight: 500;
-            font-size: 18px;
-        }
-        
-        /* Календарь */
-        .calendar {
-            width: 100%;
-            text-align: center;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-        
-        .calendar th {
-            padding: 8px;
-            font-weight: 500;
-            color: #5f6368;
-        }
-        
-        .calendar td {
-            padding: 10px;
-            cursor: pointer;
-            position: relative;
-        }
-        
-        .calendar td.selected::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 36px;
-            height: 36px;
-            background-color: #1a73e8;
-            border-radius: 50%;
-            z-index: -1;
-        }
-        
-        .calendar td.selected {
-            color: white;
-            font-weight: bold;
-        }
-        
-        .calendar td:hover::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 36px;
-            height: 36px;
-            background-color: #e8f0fe;
-            border-radius: 50%;
-            z-index: -1;
-        }
-        
-        .calendar-day {
-            display: inline-block;
-            width: 30px;
-            height: 30px;
-            line-height: 30px;
-            border-radius: 50%;
-        }
-        
-        /* Навигация */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            display: flex;
-            justify-content: space-around;
-            border-top: 1px solid #dadce0;
-            padding: 8px 0;
-            max-width: 480px;
-            margin: 0 auto;
-            z-index: 100;
-        }
-        
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            font-size: 12px;
-            color: #5f6368;
-            cursor: pointer;
-            padding: 4px 12px;
-            flex: 1;
-        }
-        
-        .nav-item.active {
-            color: #1a73e8;
-        }
-        
-        .nav-icon {
-            font-size: 20px;
-            margin-bottom: 2px;
-        }
-        
-        /* Отзывы */
-        .review {
-            padding: 12px 0;
-            border-bottom: 1px solid #e9ecef;
-        }
-        
-        .review:last-child {
-            border-bottom: none;
-        }
-        
-        .review-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-        
-        .review-name {
-            font-weight: 500;
-        }
-        
-        .review-date {
-            color: #5f6368;
-            font-size: 14px;
-        }
-        
-        /* Профиль */
-        .profile-header {
-            text-align: center;
-            padding: 20px 0;
-        }
-        
-        .profile-name {
-            font-size: 24px;
-            font-weight: 600;
-            margin: 10px 0;
-        }
-        
-        .profile-stats {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin: 15px 0;
-        }
-        
-        .stat-item {
-            text-align: center;
-        }
-        
-        .stat-value {
-            font-size: 20px;
-            font-weight: 600;
-        }
-        
-        .stat-label {
-            color: #5f6368;
-            font-size: 14px;
-        }
-        
-        /* Шаги регистрации */
-        .step-header {
-            text-align: center;
-            padding: 20px 16px;
-            background: #f8f9fa;
-        }
-        
-        .step-title {
-            font-size: 18px;
-            font-weight: 500;
-            margin: 10px 0;
-        }
-        
-        .step-number {
-            font-size: 14px;
-            color: #5f6368;
-        }
-        
-        /* Индикатор прогресса */
-        .progress-bar {
-            height: 4px;
-            background: #e9ecef;
-            border-radius: 2px;
-            margin: 10px 0;
-            overflow: hidden;
-        }
-        
-        .progress {
-            height: 100%;
-            background: #f65446;
-            width: 30%;
-        }
-        
-        /* Временное ограничение */
-        .access-restricted {
-            text-align: center;
-            padding: 30px 20px;
-        }
-        
-        .access-icon {
-            font-size: 48px;
-            color: #f65446;
-            margin-bottom: 20px;
-        }
-        
-        /* Оформление поездки */
+        /* Карточки поездок */
         .ride-card {
             border-radius: 18px;
             overflow: hidden;
             margin-bottom: 16px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             background: white;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .ride-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
         
         .ride-time {
@@ -437,7 +194,7 @@
             width: 12px;
             height: 12px;
             border-radius: 50%;
-            background: #4e89bf;
+            background: #f65446;
             z-index: 1;
         }
         
@@ -491,165 +248,16 @@
             font-size: 18px;
         }
         
-        /* Инпуты для карты */
-        .card-input {
-            display: flex;
-            margin-bottom: 20px;
-        }
-        
-        .card-input input {
-            flex: 1;
-            margin: 0 5px;
+        /* Экран ограничения доступа */
+        .access-restricted {
             text-align: center;
-            font-size: 18px;
-            padding: 12px;
-            border: 1px solid #dadce0;
-            border-radius: 18px;    
+            padding: 30px 20px;
         }
         
-        /* Виртуальная клавиатура */
-        .keyboard {
-            background: #f8f9fa;
-            padding: 10px;
-            border-top: 1px solid #dadce0;
-        }
-        
-        .keyboard-row {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 8px;
-        }
-        
-        .key {
-            width: 40px;
-            height: 40px;
-            background: white;
-            border: 1px solid #dadce0;
-            border-radius: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 4px;
-            font-weight: 500;
-            cursor: pointer;
-        }
-        
-        .key-wide {
-            width: 80px;
-        }
-        
-        .key-space {
-            width: 180px;
-        }
-        
-        /* Чекбоксы и радиокнопки */
-        .checkbox {
-            display: flex;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        
-        .checkbox input {
-            margin-right: 10px;
-            width: 20px;
-            height: 20px;
-        }
-        
-        /* Вспомогательные классы */
-        .text-center {
-            text-align: center;
-        }
-        
-        .mt-10 {
-            margin-top: 10px;
-        }
-        
-        .mt-20 {
-            margin-top: 20px;
-        }
-        
-        .mb-10 {
-            margin-bottom: 10px;
-        }
-        
-        .mb-20 {
+        .access-icon {
+            font-size: 48px;
+            color: #f65446;
             margin-bottom: 20px;
-        }
-        
-        .p-20 {
-            padding: 20px;
-        }
-        
-        .d-flex {
-            display: flex;
-        }
-        
-        .justify-between {
-            justify-content: space-between;
-        }
-        
-        .align-center {
-            align-items: center;
-        }
-        
-        .hidden {
-            display: none;
-        }
-        
-        .flex-1 {
-            flex: 1;
-        }
-        
-        .w-100 {
-            width: 100%;
-        }
-        
-        /* Анимации */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        .screen {
-            animation: fadeIn 0.3s ease-in-out;
-        }
-        
-        /* Загрузка */
-        .loader {
-            display: inline-block;
-            width: 50px;
-            height: 50px;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #f65446;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .loading-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 200px;
-        }
-        
-        /* Адаптивные стили */
-        @media (max-width: 480px) {
-            .container {
-                padding-bottom: 70px;
-            }
-            
-            .content {
-                padding: 12px;
-            }
-            
-            .calendar td {
-                padding: 8px;
-            }
         }
     </style>
 </head>
@@ -657,10 +265,7 @@
     <div class="container">
         <!-- Шапка -->
         <div class="header">
-            <button class="back-btn" id="backButton" style="display: none;">
-                <i class="fas fa-arrow-left"></i>
-            </button>
-            <div class="header-title" id="headerTitle">RAH</div>
+            <div class="header-title" id="headerTitle">PAX</div>
         </div>
         
         <!-- Основной контент -->
@@ -670,7 +275,7 @@
         
         <!-- Нижнее меню -->
         <div class="bottom-nav">
-            <div class="nav-item" data-screen="find-ride">
+            <div class="nav-item active" data-screen="find-ride">
                 <div class="nav-icon"><i class="fas fa-search"></i></div>
                 <div>Поиск</div>
             </div>
@@ -682,967 +287,91 @@
                 <div class="nav-icon"><i class="fas fa-plus-circle"></i></div>
                 <div>Создать поездку</div>
             </div>
-            <div class="nav-item active" data-screen="profile">
+            <div class="nav-item" data-screen="profile">
                 <div class="nav-icon"><i class="fas fa-user"></i></div>
                 <div>Профиль</div>
             </div>
         </div>
     </div>
 
-    <script>
-        // Инициализация Telegram Web App
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-        tg.enableClosingConfirmation();
-        
-        // Состояние приложения
-        const state = {
-            currentScreen: 'restricted',
-            previousScreen: null,
-            userData: {
-                id: 123456,
-                name: "Александр Горин",
-                balance: 500,
-                rating: 5.0,
-                reviews: 123,
-                car: {
-                    model: "LADA Granta",
-                    year: 2023,
-                    color: "Серый",
-                    plate: "A 123 AA"
-                },
-                verified: {
-                    passport: true,
-                    phone: true,
-                    car: true
-                }
-            },
-            rides: [],
-            paymentAmount: 500,
-            selectedDate: null,
-            selectedTime: null,
-            selectedRide: null,
-            newRide: {
-                from: "",
-                to: "",
-                stops: [],
-                date: "",
-                time: "",
-                passengers: 3,
-                price: 500
-            }
-        };
-        
-        // Бэкенд API эндпоинты
-        const API = {
-            getUserData: () => {
-                return new Promise(resolve => {
-                    setTimeout(() => {
-                        resolve(state.userData);
-                    }, 800);
-                });
-            },
-            
-            getRides: (from, to, date) => {
-                return new Promise(resolve => {
-                    setTimeout(() => {
-                        const rides = [
-                            {
-                                id: 1,
-                                date: "11 апреля",
-                                time: "14:00",
-                                duration: "1ч 30мин",
-                                from: "Сочи, ул. Карла Маркса, д. 2",
-                                to: "Эстосадок, Остановка Галактика",
-                                driver: {
-                                    id: 1,
-                                    name: "Александр Горин",
-                                    reviews: 123,
-                                    rating: 5.0
-                                },
-                                price: 500
-                            },
-                            {
-                                id: 2,
-                                date: "11 апреля",
-                                time: "15:00",
-                                duration: "1ч 15мин",
-                                from: "Сочи, ул. Ленина, д. 15",
-                                to: "Красная Поляна, ТРЦ Галактика",
-                                driver: {
-                                    id: 2,
-                                    name: "Иван Иванов",
-                                    reviews: 87,
-                                    rating: 4.9
-                                },
-                                price: 450
-                            }
-                        ];
-                        resolve(rides);
-                    }, 1000);
-                });
-            },
-            
-            bookRide: (rideId) => {
-                return new Promise(resolve => {
-                    setTimeout(() => {
-                        resolve({
-                            success: true,
-                            bookingId: "BK-20240411-001"
-                        });
-                    }, 1500);
-                });
-            },
-            
-            createRide: (rideData) => {
-                return new Promise(resolve => {
-                    setTimeout(() => {
-                        resolve({
-                            success: true,
-                            rideId: "RD-20240411-001"
-                        });
-                    }, 1200);
-                });
-            },
-            
-            processPayment: (amount, method) => {
-                return new Promise(resolve => {
-                    setTimeout(() => {
-                        resolve({
-                            success: true,
-                            transactionId: "TX-20240411-001"
-                        });
-                    }, 2000);
-                });
-            },
-            
-            getMyRides: () => {
-                return new Promise(resolve => {
-                    setTimeout(() => {
-                        const rides = [
-                            {
-                                id: 1,
-                                date: "11 апреля",
-                                time: "14:00",
-                                from: "Сочи, ул. Карла Маркса, д. 2",
-                                to: "Эстосадок, Остановка Галактика",
-                                driver: {
-                                    id: 1,
-                                    name: "Александр Горин",
-                                    reviews: 123,
-                                    rating: 5.0
-                                },
-                                price: 500,
-                                passengers: ["Евгений"],
-                                status: "booked"
-                            },
-                            {
-                                id: 2,
-                                date: "12 апреля",
-                                time: "10:00",
-                                from: "Краснодар, ул. Красная, д. 100",
-                                to: "Сочи, ул. Ленина, д. 15",
-                                driver: {
-                                    id: 3,
-                                    name: "Мария Смирнова",
-                                    reviews: 45,
-                                    rating: 4.8
-                                },
-                                price: 1200,
-                                passengers: [],
-                                status: "created"
-                            }
-                        ];
-                        resolve(rides);
-                    }, 1000);
-                });
-            }
-        };
-        
-        // Экраны приложения
-        const screens = {
-            // Экран временного ограничения доступа
-            restricted: () => {
-                return `
-                    <div class="access-restricted">
-                        <div class="access-icon">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
-                        <h2 class="section-title">Доступ временно ограничен</h2>
-                        <p>Пожалуйста пополните баланс, чтобы продолжить пользоваться RAH.</p>
-                        
-                        <div class="card mt-20">
-                            <div class="card-header">RAH</div>
-                            <div class="card-body">
-                                <ul class="list">
-                                    <li class="list-item">Поездки с попутчиками</li>
-                                    <li class="list-item">Пригласить друга</li>
-                                </ul>
-                            </div>
-                        </div>
-                        
-                        <h3 class="mt-20">Популярные направления</h3>
-                        <ul class="list mt-10">
-                            <li class="list-item">Сочи → Сириус</li>
-                            <li class="list-item">Сочи → Красная поляна</li>
-                            <li class="list-item">Найти поездку</li>
-                        </ul>
-                        
-                        <button class="btn btn-primary mt-20" id="addBalanceBtn">Пополнить баланс</button>
-                    </div>
-                `;
-            },
-            
-            // Экран поиска поездки
-            findRide: () => {
-                return `
-                    <h2 class="section-title">Найти поездку</h2>
-                    
-                    <div class="form-group">
-                        <label class="form-label">Откуда</label>
-                        <input type="text" class="form-control" id="fromInput" placeholder="Введите место отправления">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">Куда</label>
-                        <input type="text" class="form-control" id="toInput" placeholder="Введите место назначения">
-                    </div>
-                    
-                    <div class="d-flex justify-between">
-                        <div class="form-group" style="width: 48%;">
-                            <label class="form-label">Дата</label>
-                            <input type="text" class="form-control" id="dateInput" value="Сегодня" readonly>
-                        </div>
-                        
-                        <div class="form-group" style="width: 48%;">
-                            <label class="form-label">Количество мест</label>
-                            <div class="d-flex align-center">
-                                <button class="btn btn-secondary btn-small" id="decrementSeats">-</button>
-                                <input type="text" class="form-control" id="seatsInput" value="1" style="text-align: center; margin: 0 8px;" readonly>
-                                <button class="btn btn-secondary btn-small" id="incrementSeats">+</button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <button class="btn btn-primary mt-20" id="findRideBtn">Найти</button>
-                `;
-            },
-            
-            // Результаты поиска
-            rideResults: (rides) => {
-                if (!rides || rides.length === 0) {
-                    return `
-                        <div class="text-center p-20">
-                            <div class="mb-20" style="font-size: 48px; color: #ccc;">
-                                <i class="fas fa-car"></i>
-                            </div>
-                            <h2 class="section-title">Поездки не найдены</h2>
-                            <p class="mt-10">Попробуйте изменить параметры поиска</p>
-                            <button class="btn btn-outline mt-20" id="changeSearchBtn">Изменить поиск</button>
-                        </div>
-                    `;
-                }
-                
-                return `
-                    <h2 class="section-title">RAH</h2>
-                    <p class="mb-20">Найдено: ${rides.length} поездок, Сочи - Красная поляна</p>
-                    
-                    <h3 class="mb-10">${rides[0].date}</h3>
-                    
-                    ${rides.map(ride => `
-                        <div class="ride-card" data-ride-id="${ride.id}">
-                            <div class="ride-time">
-                                <span>${ride.time}</span>
-                                <span>${ride.duration}</span>
-                            </div>
-                            
-                            <div class="ride-location">
-                                <div class="ride-location-dot start"></div>
-                                <div class="ride-location-text">
-                                    <div class="location-title">${ride.from.split(',')[0]}</div>
-                                    <div>${ride.from.split(',').slice(1).join(',').trim()}</div>
-                                </div>
-                                
-                                <div class="ride-location-dot end"></div>
-                                <div class="ride-location-text">
-                                    <div class="location-title">${ride.to.split(',')[0]}</div>
-                                    <div>${ride.to.split(',').slice(1).join(',').trim()}</div>
-                                </div>
-                            </div>
-                            
-                            <div class="ride-footer">
-                                <div class="driver-info">
-                                    <div class="driver-avatar">${ride.driver.name.split(' ').map(n => n[0]).join('')}</div>
-                                    <div>${ride.driver.name}</div>
-                                </div>
-                                <div class="ride-price">${ride.price} ₽</div>
-                            </div>
-                        </div>
-                    `).join('')}
-                    
-                    <button class="btn btn-outline" id="loadMoreBtn">Показать еще</button>
-                `;
-            },
-            
-            // Профиль водителя 
-            driverProfile: (driver) => {
-                return `
-                    <div class="profile-header">
-                        <div class="profile-name">${driver.name}</div>
-                        <div class="rating">
-                            <div class="stars">★★★★★</div>
-                            <div class="rating-value">${driver.rating}</div>
-                        </div>
-                        <div>${driver.reviews} отзыва</div>
-                    </div>
-                    
-                    <div class="d-flex justify-between p-20">
-                        <div class="text-center">
-                            <div class="stars">★★★★★</div>
-                            <div>100%</div>
-                            <div>${driver.reviews} отзывов</div>
-                        </div>
-                        
-                        <div class="text-center">
-                            <div class="stars">★★★★☆</div>
-                            <div>0%</div>
-                            <div>0 отзывов</div>
-                        </div>
-                        
-                        <div class="text-center">
-                            <div class="stars">★★★☆☆</div>
-                            <div>0%</div>
-                            <div>0 отзывов</div>
-                        </div>
-                        
-                        <div class="text-center">
-                            <div class="stars">★☆☆☆☆</div>
-                            <div>0%</div>
-                            <div>0 отзывов</div>
-                        </div>
-                    </div>
-                    
-                    <div class="card">
-                        <div class="list">
-                            <div class="review">
-                                <div class="review-header">
-                                    <div class="review-name">Соня</div>
-                                    <div class="review-date">10.04.2025 в 9:41</div>
-                                </div>
-                                <div class="stars">★★★★★</div>
-                                <div class="mt-10">Отличный водитель, все понравилось!</div>
-                            </div>
-                            
-                            <div class="review">
-                                <div class="review-header">
-                                    <div class="review-name">Семен</div>
-                                    <div class="review-date">10.04.2025 в 9:41</div>
-                                </div>
-                                <div class="stars">★★★★★</div>
-                                <div class="mt-10">Чистый автомобиль, пунктуальный водитель.</div>
-                            </div>
-                            
-                            <div class="review">
-                                <div class="review-header">
-                                    <div class="review-name">Роман</div>
-                                    <div class="review-date">10.04.2025 в 9:41</div>
-                                </div>
-                                <div class="stars">★★★★★</div>
-                                <div class="mt-10">Удобная поездка, рекомендую!</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <button class="btn btn-primary mt-20" id="bookRideBtn">Забронировать поездку</button>
-                `;
-            },
-            
-            // Выбор способа оплаты
-            paymentMethod: () => {
-                return `
-                    <h2 class="section-title">Выберите способ оплаты</h2>
-                    
-                    <div class="card">
-                        <div class="card-header">Сумма пополнения</div>
-                        <div class="card-body">
-                            <div class="text-center" style="font-size: 24px; font-weight: 500;">${state.paymentAmount} ₽</div>
-                        </div>
-                    </div>
-                    
-                    <div class="card">
-                        <div class="card-header">Способ оплаты</div>
-                        <div class="card-body">
-                            <div class="checkbox">
-                                <input type="radio" name="payment" id="sbp" checked>
-                                <label for="sbp">СБП</label>
-                            </div>
-                            <div class="checkbox">
-                                <input type="radio" name="payment" id="card">
-                                <label for="card">Добавить карту</label>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <button class="btn btn-primary" id="continuePaymentBtn">Продолжить</button>
-                `;
-            },
-            
-            // Выбор банка 
-            bankSelection: () => {
-                return `
-                    <h2 class="section-title">Выбор банка</h2>
-                    
-                    <div class="card">
-                        <div class="list">
-                            <div class="list-item">Сбербанк</div>
-                            <div class="list-item">T-банк</div>
-                            <div class="list-item">Банк ВТБ</div>
-                            <div class="list-item">Альфа-банк</div>
-                            <div class="list-item">Газпромбанк</div>
-                            <div class="list-item">Райффайзенбанк</div>
-                            <div class="list-item">Промсвязьбанк</div>
-                            <div class="list-item">Совкомбанк</div>
-                            <div class="list-item">Россельхозбанк</div>
-                        </div>
-                    </div>
-                    
-                    <button class="btn btn-outline mt-20" id="backToPaymentBtn">Назад</button>
-                `;
-            },
-            
-            // Успешная оплата 
-            paymentSuccess: () => {
-                return `
-                    <div class="text-center p-20">
-                        <div class="mb-20" style="font-size: 48px; color: #4CAF50;">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <h2 class="section-title">Оплата прошла успешно</h2>
-                        <p class="mt-10">Вы забронировали 1 место</p>
-                        
-                        <div class="card mt-20">
-                            <div class="card-header">11 апреля, пятница</div>
-                            <div class="card-body">
-                                <div class="mb-10">
-                                    <strong>Сочи</strong><br>
-                                    ул. Карла Маркса, д. 2
-                                </div>
-                                <div>
-                                    <strong>Эстосадок</strong><br>
-                                    Остановка Галактика
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <button class="btn btn-primary mt-20" id="goToRidesBtn">Мои поездки</button>
-                        
-                        <div class="driver-info mt-20 justify-center">
-                            <div class="driver-avatar">ИИ</div>
-                            <div>
-                                <div>Иван Иванов</div>
-                                <div>123 отзыва</div>
-                            </div>
-                        </div>
-                        <div class="mt-10">Водитель</div>
-                    </div>
-                `;
-            },
-            
-            // Шаги регистрации
-            registrationStep: (step) => {
-                const steps = [
-                    {
-                        title: "Сделайте селфи с паспортом",
-                        description: "Никто из пользователей Вашу фотографию не увидит. Этот шаг необходим в целях безопасности.",
-                        icon: '<i class="fas fa-passport" style="font-size: 100px; color: #1a73e8;"></i>'
-                    },
-                    {
-                        title: "Сделайте фото вашего автомобиля",
-                        description: "Пользователи чаще выбирают водителей с фотографией автомобиля.",
-                        icon: '<i class="fas fa-car" style="font-size: 100px; color: #1a73e8;"></i>'
-                    }
-                ];
-                
-                const currentStep = steps[step - 1];
-                
-                return `
-                    <div class="step-header">
-                        <div class="step-number">Шаг ${step} из 10</div>
-                        <h2 class="step-title">${currentStep.title}</h2>
-                        <p>${currentStep.description}</p>
-                    </div>
-                    
-                    <div class="text-center p-20">
-                        ${currentStep.icon}
-                        ${step === 1 ? '<p style="font-style: italic; color: #5f6368; margin-top: 20px;">Follow your dream and watch all happen.</p>' : ''}
-                    </div>
-                    
-                    <div class="p-20">
-                        <div class="progress-bar">
-                            <div class="progress" style="width: ${step * 10}%"></div>
-                        </div>
-                        
-                        <div class="d-flex justify-between">
-                            <button class="btn btn-secondary" id="prevStepBtn">Назад</button>
-                            <button class="btn btn-primary" id="nextStepBtn">Продолжить</button>
-                        </div>
-                    </div>
-                `;
-            },
-            
-            // Профиль пользователя
-            userProfile: (user) => {
-                return `
-                    <div class="profile-header">
-                        <div class="profile-name">${user.name}</div>
-                        <p>Как меня видят пользователи</p>
-                        <button class="btn btn-outline btn-small mt-10" id="editProfileBtn">Редактировать профиль</button>
-                    </div>
-                    
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="text-center">
-                                <div class="stat-value">${user.balance} ₽</div>
-                                <div class="stat-label">Ваш баланс</div>
-                            </div>
-                            
-                            <div class="d-flex justify-between mt-20">
-                                <div class="text-center">
-                                    <div class="stat-value">0%</div>
-                                    <div class="stat-label">Рейтинг отмена поездок</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="card mt-20">
-                        <div class="list">
-                            <div class="list-item" id="aboutItem">
-                                <span>О себе</span>
-                                <i class="fas fa-chevron-right"></i>
-                            </div>
-                            <div class="list-item" id="accountItem">
-                                <span>Учетная запись</span>
-                                <i class="fas fa-chevron-right"></i>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="card mt-20">
-                        <div class="card-header">Ваш профиль</div>
-                        <div class="card-body">
-                            <div class="checkbox">
-                                <input type="checkbox" id="passport" ${user.verified.passport ? 'checked' : ''} disabled>
-                                <label for="passport">Паспорт подтвержден</label>
-                            </div>
-                            <div class="checkbox">
-                                <input type="checkbox" id="phone" ${user.verified.phone ? 'checked' : ''} disabled>
-                                <label for="phone">Номер телефона подтвержден</label>
-                            </div>
-                            <div class="checkbox">
-                                <input type="checkbox" id="car" ${user.verified.car ? 'checked' : ''} disabled>
-                                <label for="car">Автомобиль проверен</label>
-                            </div>
-                            
-                            <p class="mt-20">На сайте с 12 апреля 2024 года</p>
-                            <button class="btn btn-outline mt-10"><i class="fas fa-calendar"></i> Пожаловаться</button>
-                        </div>
-                    </div>
-                    
-                    <div class="card mt-20">
-                        <div class="card-header">О себе</div>
-                        <div class="card-body">
-                            <p>Пунктуальный, люблю слушать музыку и разговаривать обо всем</p>
-                        </div>
-                    </div>
-                    
-                    <div class="card mt-20">
-                        <div class="card-header">Автомобиль</div>
-                        <div class="card-body">
-                            <p><strong>${user.car.model}, ${user.car.year}</strong></p>
-                            <p>${user.car.color}</p>
-                            <p class="mt-10"><strong>${user.car.plate}</strong></p>
-                        </div>
-                    </div>
-                `;
-            },
-            
-            // Мои поездки
-            myRides: (rides) => {
-                return `
-                    <h2 class="section-title">Ваши поездки</h2>
-                    
-                    ${rides.length === 0 ? `
-                        <div class="text-center p-20">
-                            <div class="mb-20" style="font-size: 48px; color: #ccc;">
-                                <i class="fas fa-car"></i>
-                            </div>
-                            <p>У вас пока нет активных поездок</p>
-                            <button class="btn btn-primary mt-20" id="createRideBtn">Создать поездку</button>
-                        </div>
-                    ` : `
-                        <div class="card">
-                            <div class="card-header">История</div>
-                            <div class="card-body">
-                                <p>Вы можете отменить поездку в течение 15 минут без понижения рейтинга</p>
-                            </div>
-                        </div>
-                        
-                        ${rides.map(ride => `
-                            <div class="ride-card" data-ride-id="${ride.id}">
-                                <div class="card-header">${ride.date}</div>
-                                <div class="ride-time">
-                                    <span>${ride.time}</span>
-                                </div>
-                                
-                                <div class="ride-location">
-                                    <div class="ride-location-dot start"></div>
-                                    <div class="ride-location-text">
-                                        <div class="location-title">${ride.from.split(',')[0]}</div>
-                                        <div>${ride.from.split(',').slice(1).join(',').trim()}</div>
-                                    </div>
-                                    
-                                    <div class="ride-location-dot end"></div>
-                                    <div class="ride-location-text">
-                                        <div class="location-title">${ride.to.split(',')[0]}</div>
-                                        <div>${ride.to.split(',').slice(1).join(',').trim()}</div>
-                                    </div>
-                                </div>
-                                
-                                <div class="ride-footer">
-                                    <div class="driver-info">
-                                        <div class="driver-avatar">${ride.driver.name.split(' ').map(n => n[0]).join('')}</div>
-                                        <div>${ride.driver.name}</div>
-                                    </div>
-                                    <div class="ride-price">${ride.price} ₽</div>
-                                </div>
-                                
-                                ${ride.passengers.length > 0 ? `
-                                    <div class="card-body">
-                                        <div class="form-label">Ваши пассажиры</div>
-                                        <div>${ride.passengers.join(', ')}</div>
-                                    </div>
-                                ` : ''}
-                                
-                                <div class="card-body">
-                                    <button class="btn btn-outline w-100" data-action="cancel" data-ride-id="${ride.id}">
-                                        ${ride.status === 'booked' ? 'Отменить бронирование' : 'Отменить поездку'}
-                                    </button>
-                                </div>
-                            </div>
-                        `).join('')}
-                    `}
-                `;
-            },
-            
-            // Загрузка
-            loading: (message = "Загрузка...") => {
-                return `
-                    <div class="loading-container">
-                        <div>
-                            <div class="loader"></div>
-                            <div class="text-center mt-20">${message}</div>
-                        </div>
-                    </div>
-                `;
-            }
-        };
-        
-        // Функция для отображения экрана
-        function showScreen(screenName, data = null) {
-            // Обновляем заголовок
-            document.getElementById('headerTitle').textContent = 
-                screenName === 'restricted' ? 'RAH' : 
-                screenName === 'findRide' ? 'Найти поездку' :
-                screenName === 'rideResults' ? 'Результаты поиска' :
-                screenName === 'driverProfile' ? 'Профиль водителя' :
-                screenName === 'paymentMethod' ? 'Способ оплаты' :
-                screenName === 'bankSelection' ? 'Выбор банка' :
-                screenName === 'paymentSuccess' ? 'Успешная оплата' :
-                screenName.startsWith('registrationStep') ? 'Регистрация' :
-                screenName === 'userProfile' ? 'Профиль' :
-                screenName === 'myRides' ? 'Мои поездки' : 'RAH';
-            
-            // Показываем/скрываем кнопку "Назад"
-            const backButton = document.getElementById('backButton');
-            backButton.style.display = screenName === 'restricted' ? 'none' : 'flex';
-            
-            // Отображаем контент экрана
-            const appContent = document.getElementById('appContent');
-            
-            if (screenName === 'loading') {
-                appContent.innerHTML = screens.loading(data);
-                return;
-            }
-            
-            state.previousScreen = state.currentScreen;
-            state.currentScreen = screenName;
-            
-            switch(screenName) {
-                case 'restricted':
-                    appContent.innerHTML = screens.restricted();
-                    break;
-                case 'findRide':
-                    appContent.innerHTML = screens.findRide();
-                    break;
-                case 'rideResults':
-                    appContent.innerHTML = screens.rideResults(data || []);
-                    break;
-                case 'driverProfile':
-                    appContent.innerHTML = screens.driverProfile(data || state.userData);
-                    break;
-                case 'paymentMethod':
-                    appContent.innerHTML = screens.paymentMethod();
-                    break;
-                case 'bankSelection':
-                    appContent.innerHTML = screens.bankSelection();
-                    break;
-                case 'paymentSuccess':
-                    appContent.innerHTML = screens.paymentSuccess();
-                    break;
-                case 'registrationStep1':
-                    appContent.innerHTML = screens.registrationStep(1);
-                    break;
-                case 'registrationStep2':
-                    appContent.innerHTML = screens.registrationStep(2);
-                    break;
-                case 'userProfile':
-                    appContent.innerHTML = screens.userProfile(state.userData);
-                    break;
-                case 'myRides':
-                    appContent.innerHTML = screens.myRides(data || []);
-                    break;
-                default:
-                    appContent.innerHTML = screens.restricted();
-            }
-            
-            // Устанавливаем обработчики событий после отрисовки экрана
-            setupEventHandlers();
-        }
-        
-        // Установка обработчиков событий
-        function setupEventHandlers() {
-            // Кнопка "Назад"
-            document.getElementById('backButton').addEventListener('click', () => {
-                if (state.previousScreen) {
-                    showScreen(state.previousScreen);
-                } else {
-                    showScreen('restricted');
-                }
-            });
-            
-            // Нижняя навигация
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.addEventListener('click', function() {
-                    const screenId = this.getAttribute('data-screen');
-                    
-                    // Обновляем активное состояние
-                    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-                    this.classList.add('active');
-                    
-                    // Показываем соответствующий экран
-                    switch(screenId) {
-                        case 'find-ride':
-                            showScreen('findRide');
-                            break;
-                        case 'my-rides':
-                            showScreen('loading', 'Загрузка ваших поездок...');
-                            API.getMyRides().then(rides => {
-                                showScreen('myRides', rides);
-                            });
-                            break;
-                        case 'create-ride':
-                            showScreen('registrationStep1');
-                            break;
-                        case 'profile':
-                            showScreen('loading', 'Загрузка профиля...');
-                            API.getUserData().then(user => {
-                                state.userData = user;
-                                showScreen('userProfile');
-                            });
-                            break;
-                    }
-                });
-            });
-            
-            // Обработчики для экрана ограничения доступа
-            if (state.currentScreen === 'restricted') {
-                document.getElementById('addBalanceBtn').addEventListener('click', () => {
-                    showScreen('paymentMethod');
-                });
-            }
-            
-            // Обработчики для экрана поиска
-            if (state.currentScreen === 'findRide') {
-                document.getElementById('findRideBtn').addEventListener('click', () => {
-                    const from = document.getElementById('fromInput').value;
-                    const to = document.getElementById('toInput').value;
-                    
-                    if (!from || !to) {
-                        alert('Пожалуйста, заполните все поля');
-                        return;
-                    }
-                    
-                    showScreen('loading', 'Поиск поездок...');
-                    API.getRides(from, to, new Date()).then(rides => {
-                        showScreen('rideResults', rides);
-                    });
-                });
-                
-                document.getElementById('incrementSeats').addEventListener('click', () => {
-                    const seatsInput = document.getElementById('seatsInput');
-                    seatsInput.value = parseInt(seatsInput.value) + 1;
-                });
-                
-                document.getElementById('decrementSeats').addEventListener('click', () => {
-                    const seatsInput = document.getElementById('seatsInput');
-                    const value = parseInt(seatsInput.value);
-                    if (value > 1) {
-                        seatsInput.value = value - 1;
-                    }
-                });
-            }
-            
-            // Обработчики для результатов поиска
-            if (state.currentScreen === 'rideResults') {
-                document.querySelectorAll('.ride-card').forEach(card => {
-                    card.addEventListener('click', () => {
-                        const rideId = card.getAttribute('data-ride-id');
-                        const ride = state.rides.find(r => r.id === parseInt(rideId));
-                        if (ride) {
-                            showScreen('driverProfile', ride.driver);
-                        }
-                    });
-                });
-                
-                if (document.getElementById('changeSearchBtn')) {
-                    document.getElementById('changeSearchBtn').addEventListener('click', () => {
-                        showScreen('findRide');
-                    });
-                }
-            }
-            
-            // Обработчики для экрана оплаты
-            if (state.currentScreen === 'paymentMethod') {
-                document.getElementById('continuePaymentBtn').addEventListener('click', () => {
-                    const method = document.querySelector('input[name="payment"]:checked').nextElementSibling.textContent;
-                    if (method === 'СБП') {
-                        showScreen('bankSelection');
-                    } else {
-                        // Для добавления карты
-                        alert('Функция добавления карты в разработке');
-                    }
-                });
-            }
-            
-            // Обработчики для выбора банка
-            if (state.currentScreen === 'bankSelection') {
-                document.getElementById('backToPaymentBtn').addEventListener('click', () => {
-                    showScreen('paymentMethod');
-                });
-                
-                document.querySelectorAll('.list-item').forEach(item => {
-                    item.addEventListener('click', () => {
-                        showScreen('loading', 'Обработка платежа...');
-                        API.processPayment(state.paymentAmount, 'СБП').then(result => {
-                            if (result.success) {
-                                state.userData.balance += state.paymentAmount;
-                                showScreen('paymentSuccess');
-                            }
-                        });
-                    });
-                });
-            }
-            
-            // Обработчики для экрана успешной оплаты
-            if (state.currentScreen === 'paymentSuccess') {
-                document.getElementById('goToRidesBtn').addEventListener('click', () => {
-                    showScreen('myRides');
-                });
-            }
-            
-            // Обработчики для регистрации
-            if (state.currentScreen.startsWith('registrationStep')) {
-                const step = parseInt(state.currentScreen.replace('registrationStep', ''));
-                
-                document.getElementById('prevStepBtn').addEventListener('click', () => {
-                    if (step > 1) {
-                        showScreen(`registrationStep${step - 1}`);
-                    } else {
-                        showScreen('restricted');
-                    }
-                });
-                
-                document.getElementById('nextStepBtn').addEventListener('click', () => {
-                    if (step < 10) {
-                        showScreen(`registrationStep${step + 1}`);
-                    } else {
-                        // Завершение регистрации
-                        showScreen('userProfile');
-                    }
-                });
-            }
-            
-            // Обработчики для профиля пользователя
-            if (state.currentScreen === 'userProfile') {
-                document.getElementById('editProfileBtn').addEventListener('click', () => {
-                    alert('Редактирование профиля в разработке');
-                });
-                
-                document.getElementById('aboutItem').addEventListener('click', () => {
-                    alert('Информация о себе');
-                });
-                
-                document.getElementById('accountItem').addEventListener('click', () => {
-                    alert('Настройки учетной записи');
-                });
-            }
-            
-            // Обработчики для моих поездок
-            if (state.currentScreen === 'myRides') {
-                document.querySelectorAll('[data-action="cancel"]').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        const rideId = btn.getAttribute('data-ride-id');
-                        if (confirm('Вы уверены, что хотите отменить поездку?')) {
-                            showScreen('loading', 'Отмена поездки...');
-                            setTimeout(() => {
-                                alert('Поездка успешно отменена');
-                                // Обновляем список поездок
-                                API.getMyRides().then(rides => {
-                                    showScreen('myRides', rides);
-                                });
-                            }, 1500);
-                        }
-                    });
-                });
-                
-                if (document.getElementById('createRideBtn')) {
-                    document.getElementById('createRideBtn').addEventListener('click', () => {
-                        showScreen('registrationStep1');
-                    });
-                }
-            }
-        }
-        
-        // Инициализация приложения
-        function initApp() {
-            // Загружаем данные пользователя
-            showScreen('loading', 'Загрузка данных...');
-            
-            API.getUserData().then(user => {
-                state.userData = user;
-                
-                if (user.balance <= 0) {
-                    showScreen('restricted');
-                } else {
-                    showScreen('userProfile');
-                }
-            });
-        }
-        
-        // Запускаем приложение
-        initApp();
-    </script>
+    <!-- Модальные окна -->
+    <div class="modal-overlay" id="imageModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Загрузка изображения</div>
+                <button class="modal-close" id="closeImageModal">&times;</button>
+            </div>
+            <div class="image-upload" id="imageUpload">
+                <input type="file" id="imageInput" accept="image/*">
+                <div class="upload-icon">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <div class="upload-text">
+                    Нажмите или перетащите изображение сюда<br>
+                    <small>JPG, PNG до 5MB</small>
+                </div>
+            </div>
+            <img class="image-preview" id="imagePreview">
+            <div class="upload-progress" id="uploadProgress">
+                <div class="upload-progress-bar" id="uploadProgressBar"></div>
+            </div>
+            <div class="d-flex justify-between mt-20">
+                <button class="btn btn-outline" id="cancelUpload">Отмена</button>
+                <button class="btn btn-primary" id="confirmUpload">Загрузить</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="chatModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Чат с водителем</div>
+                <button class="modal-close" id="closeChatModal">&times;</button>
+            </div>
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Сообщения будут добавляться динамически -->
+                </div>
+                <div class="chat-input-container">
+                    <textarea class="chat-input" id="chatInput" placeholder="Введите сообщение..." rows="1"></textarea>
+                    <button class="send-btn" id="sendMessage" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно отмены поездки -->
+    <div id="cancelModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="modal-close" id="closeCancelModal">&times;</button>
+                <div class="modal-title">Отмена бронирования</div>
+            </div>
+            <div class="modal-body">
+                <div class="form-label">Причина отмены</div>
+                <div class="cancel-reasons" id="cancelReasons">
+                    <button class="reason-btn" data-reason="Забронировал по ошибке">Забронировал по ошибке</button>
+                    <button class="reason-btn" data-reason="Нет связи с водителем/пассажиром">Нет связи с водителем/пассажиром</button>
+                    <button class="reason-btn" data-reason="Требует предоплату">Требует предоплату</button>
+                    <button class="reason-btn" data-reason="Завышает цену">Завышает цену</button>
+                    <button class="reason-btn" data-reason="Условия поездки изменились">Условия поездки изменились</button>
+                    <button class="reason-btn" data-reason="На фото другая машина и номер">На фото другая машина и номер</button>
+                </div>
+                <div class="form-label mt-20">Комментарий</div>
+                <textarea id="cancelComment" class="cancel-comment" placeholder="Можете описать причину подробнее"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary w-100" id="confirmCancelBtn" disabled>Отменить бронирование</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Уведомления -->
+    <div id="notifications"></div>
+
+    <!-- Скрипты приложения -->
+    <script type="module" src="assets/js/app.js"></script>
 </body>
-</html>
+</html> 

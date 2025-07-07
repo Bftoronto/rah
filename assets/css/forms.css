@@ -1,0 +1,681 @@
+/* Стили форм */
+
+/* Группы полей */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
+/* Метки полей */
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #5f6368;
+    font-size: 14px;
+}
+
+.form-label.required::after {
+    content: " *";
+    color: #f65446;
+}
+
+/* Поля ввода */
+.form-control {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid #dadce0;
+    border-radius: 12px;
+    font-size: 16px;
+    background: white;
+    transition: all 0.3s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.form-control:focus {
+    border-color: #f65446;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(246, 84, 70, 0.1);
+}
+
+.form-control:hover {
+    border-color: #bdc1c6;
+}
+
+.form-control[readonly] {
+    cursor: pointer;
+    background-color: #f8f9fa;
+    color: #5f6368;
+}
+
+.form-control[readonly]:hover {
+    border-color: #f65446;
+    background-color: #fff5f5;
+}
+
+.form-control[disabled] {
+    background-color: #f1f3f4;
+    color: #9aa0a6;
+    cursor: not-allowed;
+}
+
+/* Состояния полей */
+.form-control.error {
+    border-color: #f65446;
+    box-shadow: 0 0 0 3px rgba(246, 84, 70, 0.1);
+}
+
+.form-control.success {
+    border-color: #4caf50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.form-control.warning {
+    border-color: #ff9800;
+    box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.1);
+}
+
+/* Сообщения об ошибках */
+.error-message {
+    color: #f65446;
+    font-size: 12px;
+    margin-top: 6px;
+    display: none;
+    line-height: 1.4;
+}
+
+.error-message.show {
+    display: block;
+}
+
+.success-message {
+    color: #4caf50;
+    font-size: 12px;
+    margin-top: 6px;
+    display: none;
+}
+
+.success-message.show {
+    display: block;
+}
+
+/* Текстовые области */
+textarea.form-control {
+    resize: vertical;
+    min-height: 100px;
+    line-height: 1.5;
+}
+
+/* Селекты */
+select.form-control {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 40px;
+}
+
+/* Чекбоксы и радиокнопки */
+.form-check {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    cursor: pointer;
+}
+
+.form-check:last-child {
+    margin-bottom: 0;
+}
+
+.form-check-input {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+    cursor: pointer;
+}
+
+.form-check-label {
+    font-size: 14px;
+    color: #202124;
+    cursor: pointer;
+    flex: 1;
+}
+
+/* Группы кнопок */
+.form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.form-actions .btn {
+    flex: 1;
+}
+
+/* Валидация в реальном времени */
+.form-control.validating {
+    border-color: #ff9800;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83'%3e%3c/path%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    animation: spin 1s linear infinite;
+}
+
+/* Автозаполнение */
+.form-control:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 30px white inset;
+    -webkit-text-fill-color: #202124;
+}
+
+.form-control:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 30px white inset, 0 0 0 3px rgba(246, 84, 70, 0.1);
+}
+
+/* Плейсхолдеры */
+.form-control::placeholder {
+    color: #9aa0a6;
+    opacity: 1;
+}
+
+.form-control:focus::placeholder {
+    color: #bdc1c6;
+}
+
+/* Размеры полей */
+.form-control.small {
+    padding: 10px 12px;
+    font-size: 14px;
+}
+
+.form-control.large {
+    padding: 18px 20px;
+    font-size: 18px;
+}
+
+/* Поля с иконками */
+.form-control-with-icon {
+    position: relative;
+}
+
+.form-control-with-icon .form-control {
+    padding-left: 44px;
+}
+
+.form-control-with-icon .icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9aa0a6;
+    font-size: 16px;
+    pointer-events: none;
+}
+
+.form-control-with-icon .form-control:focus + .icon {
+    color: #f65446;
+}
+
+/* Поля с кнопками */
+.form-control-with-button {
+    display: flex;
+    gap: 8px;
+}
+
+.form-control-with-button .form-control {
+    flex: 1;
+}
+
+.form-control-with-button .btn {
+    flex-shrink: 0;
+    width: auto;
+    margin: 0;
+}
+
+/* Счетчики символов */
+.form-control-with-counter {
+    position: relative;
+}
+
+.form-control-with-counter .counter {
+    position: absolute;
+    bottom: -20px;
+    right: 0;
+    font-size: 12px;
+    color: #9aa0a6;
+}
+
+.form-control-with-counter .counter.warning {
+    color: #ff9800;
+}
+
+.form-control-with-counter .counter.error {
+    color: #f65446;
+}
+
+/* Группы полей в строку */
+.form-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.form-row .form-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+/* Адаптивность для форм */
+@media (max-width: 480px) {
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .form-control-with-button {
+        flex-direction: column;
+    }
+    
+    .form-control-with-button .btn {
+        width: 100%;
+    }
+}
+
+/* Анимации для форм */
+@keyframes formShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.form-control.error {
+    animation: formShake 0.5s ease-in-out;
+}
+
+/* Стили для файловых полей */
+.form-control[type="file"] {
+    padding: 12px;
+    cursor: pointer;
+}
+
+.form-control[type="file"]::-webkit-file-upload-button {
+    background: #f65446;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-right: 12px;
+}
+
+.form-control[type="file"]::-webkit-file-upload-button:hover {
+    background: #e53e3e;
+}
+
+/* Стили для полей с датой и временем */
+.form-control[type="date"],
+.form-control[type="time"],
+.form-control[type="datetime-local"] {
+    position: relative;
+}
+
+.form-control[type="date"]::-webkit-calendar-picker-indicator,
+.form-control[type="time"]::-webkit-calendar-picker-indicator,
+.form-control[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    background: transparent;
+    bottom: 0;
+    color: transparent;
+    cursor: pointer;
+    height: auto;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: auto;
+}
+
+/* Стили для полей с паролем */
+.form-control[type="password"] {
+    letter-spacing: 2px;
+}
+
+/* Стили для полей с номером */
+.form-control[type="number"]::-webkit-inner-spin-button,
+.form-control[type="number"]::-webkit-outer-spin-button {
+    opacity: 1;
+    height: 20px;
+}
+
+/* Стили для полей поиска */
+.form-control[type="search"] {
+    padding-left: 44px;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3ccircle cx='11' cy='11' r='8'%3e%3c/circle%3e%3cpath d='m21 21-4.35-4.35'%3e%3c/path%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: 16px center;
+    background-size: 16px;
+}
+
+.form-control[type="search"]:focus {
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f65446' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3ccircle cx='11' cy='11' r='8'%3e%3c/circle%3e%3cpath d='m21 21-4.35-4.35'%3e%3c/path%3e%3c/svg%3e");
+}
+
+/* Стили для экранов регистрации */
+.registration-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.registration-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.registration-header h1 {
+    color: #2c3e50;
+    margin-bottom: 8px;
+}
+
+.registration-form {
+    margin-bottom: 30px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e1e8ed;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.form-group input[readonly] {
+    background-color: #f8f9fa;
+    color: #6c757d;
+}
+
+.form-text {
+    display: block;
+    margin-top: 6px;
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.registration-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: space-between;
+}
+
+.registration-actions .btn {
+    flex: 1;
+    padding: 14px 24px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* Стили для пользовательского соглашения */
+.policy-content {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #e1e8ed;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    background-color: #f8f9fa;
+}
+
+.policy-text {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #2c3e50;
+    white-space: pre-line;
+}
+
+.policy-acceptance {
+    margin-bottom: 30px;
+}
+
+/* Стили для чекбокса */
+.checkbox-container {
+    display: flex;
+    align-items: flex-start;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.checkbox-container input[type="checkbox"] {
+    display: none;
+}
+
+.checkmark {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #3498db;
+    border-radius: 4px;
+    margin-right: 12px;
+    margin-top: 2px;
+    position: relative;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.checkbox-container input[type="checkbox"]:checked + .checkmark {
+    background-color: #3498db;
+}
+
+.checkbox-container input[type="checkbox"]:checked + .checkmark::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.checkbox-text {
+    flex: 1;
+}
+
+.checkbox-text a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.checkbox-text a:hover {
+    text-decoration: underline;
+}
+
+/* Стили для загрузки аватара */
+.avatar-upload {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.avatar-preview {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid #e1e8ed;
+    flex-shrink: 0;
+}
+
+.avatar-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Стили для переключателя водителя */
+.driver-toggle {
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 2px solid #e1e8ed;
+}
+
+.toggle-container {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.toggle-container input[type="checkbox"] {
+    display: none;
+}
+
+.toggle-slider {
+    width: 50px;
+    height: 26px;
+    background-color: #ccc;
+    border-radius: 13px;
+    margin-right: 12px;
+    position: relative;
+    transition: background-color 0.3s ease;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: white;
+    border-radius: 50%;
+    top: 3px;
+    left: 3px;
+    transition: transform 0.3s ease;
+}
+
+.toggle-container input[type="checkbox"]:checked + .toggle-slider {
+    background-color: #3498db;
+}
+
+.toggle-container input[type="checkbox"]:checked + .toggle-slider::before {
+    transform: translateX(24px);
+}
+
+.toggle-text {
+    color: #2c3e50;
+}
+
+/* Стили для загрузки файлов */
+.file-upload {
+    margin-top: 10px;
+}
+
+.file-preview {
+    margin-top: 10px;
+    min-height: 60px;
+    border: 2px dashed #e1e8ed;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+}
+
+.file-preview img {
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Стили для экрана успеха */
+.success-container {
+    text-align: center;
+    padding: 40px 20px;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.success-icon {
+    font-size: 80px;
+    margin-bottom: 20px;
+}
+
+.success-actions {
+    margin-top: 30px;
+}
+
+/* Стили для экрана ошибки */
+.error-container {
+    text-align: center;
+    padding: 40px 20px;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.error-icon {
+    font-size: 80px;
+    margin-bottom: 20px;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .registration-container {
+        margin: 10px;
+        padding: 15px;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .registration-actions {
+        flex-direction: column;
+    }
+    
+    .avatar-upload {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .policy-content {
+        max-height: 300px;
+    }
+} 

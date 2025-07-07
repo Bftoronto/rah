@@ -94,4 +94,51 @@ start-ngrok.sh
 
 # Local configuration
 config.local.js
-.env.local 
+.env.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+.env
+
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+
+# Frontend build
+/dist/
+/build/
+
+# Alembic
+backend/migrations/versions/
+
+# SQLite
+*.sqlite3
+
+# Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# VSCode
+.vscode/
+
+# Backend env
+backend/.env
+
+# Logs
+*.log
+
+# System
+Thumbs.db
+
+# JetBrains
+.idea/
+
+# Misc
+migrations/__pycache__/ 

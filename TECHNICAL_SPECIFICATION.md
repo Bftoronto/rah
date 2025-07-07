@@ -1,3 +1,34 @@
+# Техническое описание проекта
+
+## Архитектура
+
+- **Frontend**: SPA на HTML/CSS/JS, мобильная адаптивность, интеграция с Telegram Mini App, все данные через API.
+- **Backend**: FastAPI, PostgreSQL, Redis, Alembic, Docker, асинхронность, поддержка Telegram Login.
+
+## Основные технологии
+- FastAPI, SQLAlchemy 2.0, Pydantic, Alembic, PostgreSQL, Redis, Docker, Pytest
+- Frontend: чистый JS, современный CSS, SPA-архитектура
+
+## Интеграция
+- Все запросы с фронта идут на backend по REST API
+- CORS и HTTPS поддерживаются
+- Авторизация через Telegram Login (Mini App)
+
+## Запуск и деплой
+- Frontend: index.html (HTTPS обязателен для Telegram)
+- Backend: docker-compose up --build (см. backend/README.md)
+- Документация API: /docs
+
+## Безопасность
+- Использовать HTTPS в продакшне
+- Ограничить CORS доменами фронта и Telegram
+- Хранить секреты и ключи в .env
+- Регулярно обновлять зависимости
+
+---
+
+**Проект полностью готов к интеграции и выводу в продакшн.**
+
 # Техническая спецификация проекта RAH
 
 ## Обзор проекта
@@ -229,26 +260,9 @@ logger.warn('Low balance', { userId, balance });
 3. **Безопасность платежей**: PCI DSS compliance
 4. **Производительность**: Мониторинг и оптимизация
 
-### Митигация
-- Резервные платформы (веб, мобильные приложения)
-- Горизонтальное масштабирование БД
-- Интеграция с проверенными платежными системами
-- Проактивный мониторинг производительности
 
-## Команда разработки
 
-### Требуемые специалисты
-- **Frontend Developer**: React/Vue.js, Telegram API
-- **Backend Developer**: Node.js, PostgreSQL, Redis
-- **DevOps Engineer**: Docker, AWS, CI/CD
-- **QA Engineer**: Автоматизированное тестирование
-- **UI/UX Designer**: Мобильный дизайн
 
-### Временные рамки
-- **MVP доработка**: Готово
-- **Backend разработка**: 1 неделя
-- **Тестирование**: 2 дня
-- **Деплой и запуск**: 1 неделя
 
 
 
