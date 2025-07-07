@@ -232,34 +232,115 @@ class BasicInfoScreen {
     }
 
     validateForm() {
-        const phone = document.getElementById('phone')?.value;
-        const fullName = document.getElementById('fullName')?.value;
+        const phone = document.getElementById('phone')?.value?.trim();
+        const fullName = document.getElementById('fullName')?.value?.trim();
         const birthDate = document.getElementById('birthDate')?.value;
-        const city = document.getElementById('city')?.value;
+        const city = document.getElementById('city')?.value?.trim();
         const continueBtn = document.getElementById('continueToDriver');
 
+        // Проверяем обязательные поля
         const isValid = phone && fullName && birthDate && city;
         
+        // Дополнительная валидация
+        const errors = [];
+        
+        if (!phone) {
+            errors.push('Введите номер телефона');
+        } else if (!/^\+?[0-9\s\-\(\)]{10,}$/.test(phone)) {
+            errors.push('Неверный формат номера телефона');
+        }
+        
+        if (!fullName) {
+            errors.push('Введите полное имя');
+        } else if (fullName.length < 2) {
+            errors.push('Имя должно содержать минимум 2 символа');
+        }
+        
+        if (!birthDate) {
+            errors.push('Выберите дату рождения');
+        } else {
+            const birth = new Date(birthDate);
+            const today = new Date();
+            const age = today.getFullYear() - birth.getFullYear();
+            if (age < 18 || age > 100) {
+                errors.push('Возраст должен быть от 18 до 100 лет');
+            }
+        }
+        
+        if (!city) {
+            errors.push('Введите город');
+        }
+        
+        // Показываем ошибки
+        this.showValidationErrors(errors);
+        
         if (continueBtn) {
-            continueBtn.disabled = !isValid;
+            continueBtn.disabled = !isValid || errors.length > 0;
         }
 
-        return isValid;
+        return isValid && errors.length === 0;
+    }
+    
+    showValidationErrors(errors) {
+        // Очищаем предыдущие ошибки
+        const errorElements = document.querySelectorAll('.validation-error');
+        errorElements.forEach(el => el.remove());
+        
+        // Показываем новые ошибки
+        errors.forEach(error => {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'validation-error';
+            errorDiv.textContent = error;
+            errorDiv.style.color = '#dc3545';
+            errorDiv.style.fontSize = '12px';
+            errorDiv.style.marginTop = '5px';
+            
+            // Добавляем ошибку к соответствующему полю
+            const fieldMap = {
+                'Введите номер телефона': 'phone',
+                'Неверный формат номера телефона': 'phone',
+                'Введите полное имя': 'fullName',
+                'Имя должно содержать минимум 2 символа': 'fullName',
+                'Выберите дату рождения': 'birthDate',
+                'Возраст должен быть от 18 до 100 лет': 'birthDate',
+                'Введите город': 'city'
+            };
+            
+            const fieldName = fieldMap[error];
+            if (fieldName) {
+                const field = document.getElementById(fieldName);
+                if (field && field.parentNode) {
+                    field.parentNode.appendChild(errorDiv);
+                }
+            }
+        });
     }
 
     async validateAndContinue() {
         if (!this.validateForm()) {
-            Utils.showNotification('Ошибка', 'Заполните все обязательные поля', 'error');
+            Utils.showNotification('Заполните все обязательные поля корректно', 'error');
             return;
         }
 
-        // Собираем данные формы
+        // Собираем данные формы с валидацией
+        const phone = document.getElementById('phone').value.trim();
+        const fullName = document.getElementById('fullName').value.trim();
+        const birthDate = document.getElementById('birthDate').value;
+        const city = document.getElementById('city').value.trim();
+        const avatarUrl = document.getElementById('avatarUrl').value;
+        
+        // Дополнительная проверка данных
+        if (!phone || !fullName || !birthDate || !city) {
+            Utils.showNotification('Заполните все обязательные поля', 'error');
+            return;
+        }
+        
         this.formData = {
-            phone: document.getElementById('phone').value,
-            fullName: document.getElementById('fullName').value,
-            birthDate: document.getElementById('birthDate').value,
-            city: document.getElementById('city').value,
-            avatarUrl: document.getElementById('avatarUrl').value
+            phone,
+            fullName,
+            birthDate,
+            city,
+            avatarUrl
         };
 
         // Сохраняем данные в состоянии

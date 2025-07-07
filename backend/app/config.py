@@ -1,6 +1,14 @@
 import os
+import logging
 from pydantic_settings import BaseSettings
 from typing import Optional, List
+
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 class Settings(BaseSettings):
     # Основные настройки
@@ -73,18 +81,18 @@ def validate_settings():
 def validate_security_settings():
     """Проверка настроек безопасности"""
     if settings.secret_key == "your-secret-key-here":
-        print("ВНИМАНИЕ: Используется стандартный secret_key. Измените его в продакшене!")
+        logger.warning("ВНИМАНИЕ: Используется стандартный secret_key. Измените его в продакшене!")
     
     if settings.debug:
-        print("ВНИМАНИЕ: Режим отладки включен. Отключите в продакшене!")
+        logger.warning("ВНИМАНИЕ: Режим отладки включен. Отключите в продакшене!")
     
     if "*" in settings.cors_origins:
-        print("ВНИМАНИЕ: CORS настроен на все домены. Ограничьте в продакшене!")
+        logger.warning("ВНИМАНИЕ: CORS настроен на все домены. Ограничьте в продакшене!")
 
 # Валидация настроек при импорте
 try:
     validate_settings()
     validate_security_settings()
 except ValueError as e:
-    print(f"Ошибка конфигурации: {e}")
-    print("Убедитесь, что все обязательные переменные окружения установлены") 
+    logger.error(f"Ошибка конфигурации: {e}")
+    logger.error("Убедитесь, что все обязательные переменные окружения установлены") 

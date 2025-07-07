@@ -8,6 +8,7 @@ from ..models.user import User, ProfileChangeLog
 from ..schemas.user import UserCreate, UserUpdate, UserRead, PrivacyPolicyAccept
 from ..utils.security import verify_telegram_data
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.exc import IntegrityError
 
 logger = logging.getLogger(__name__)
 security = HTTPBearer()
@@ -28,35 +29,34 @@ class AuthService:
         """Создать нового пользователя"""
         try:
             # Проверяем, не существует ли уже пользователь с таким Telegram ID
-            existing_user = self.get_user_by_telegram_id(user_data.telegram_id)
+            existing_user = self.get_user_by_telegram_id(str(user_data.telegram_id))
             if existing_user:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=status.HTTP_409_CONFLICT,
                     detail="Пользователь с таким Telegram ID уже существует"
                 )
             
-            # Создаем пользователя
+            # Создаем нового пользователя
             db_user = User(
-                telegram_id=user_data.telegram_id,
-                phone=user_data.phone,
+                telegram_id=str(user_data.telegram_id),
+                username=user_data.username,
                 full_name=user_data.full_name,
+                phone=user_data.phone,
                 birth_date=user_data.birth_date,
                 city=user_data.city,
                 avatar_url=user_data.avatar_url,
+                is_driver=user_data.is_driver,
+                car_brand=user_data.car_brand,
+                car_model=user_data.car_model,
+                car_year=user_data.car_year,
+                car_color=user_data.car_color,
+                driver_license_number=user_data.driver_license_number,
+                driver_license_photo_url=user_data.driver_license_photo_url,
+                car_photo_url=user_data.car_photo_url,
                 privacy_policy_accepted=user_data.privacy_policy_accepted,
-                privacy_policy_accepted_at=datetime.now() if user_data.privacy_policy_accepted else None
+                privacy_policy_accepted_at=datetime.now() if user_data.privacy_policy_accepted else None,
+                privacy_policy_version=user_data.privacy_policy_version
             )
-            
-            # Добавляем водительские данные, если они есть
-            if user_data.driver_data:
-                db_user.car_brand = user_data.driver_data.car_brand
-                db_user.car_model = user_data.driver_data.car_model
-                db_user.car_year = user_data.driver_data.car_year
-                db_user.car_color = user_data.driver_data.car_color
-                db_user.driver_license_number = user_data.driver_data.driver_license_number
-                db_user.driver_license_photo_url = user_data.driver_data.driver_license_photo_url
-                db_user.car_photo_url = user_data.driver_data.car_photo_url
-                db_user.is_driver = True
             
             self.db.add(db_user)
             self.db.commit()
@@ -65,9 +65,19 @@ class AuthService:
             logger.info(f"Создан новый пользователь: {db_user.telegram_id}")
             return db_user
             
+        except HTTPException:
+            self.db.rollback()
+            raise
+        except IntegrityError as e:
+            self.db.rollback()
+            logger.error(f"Ошибка целостности данных при создании пользователя: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Пользователь с такими данными уже существует"
+            )
         except Exception as e:
             self.db.rollback()
-            logger.error(f"Ошибка создания пользователя: {str(e)}")
+            logger.error(f"Неожиданная ошибка при создании пользователя: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Ошибка создания пользователя"
@@ -176,9 +186,19 @@ class AuthService:
             logger.info(f"Обновлен профиль пользователя: {user.telegram_id}")
             return user
             
+        except HTTPException:
+            self.db.rollback()
+            raise
+        except IntegrityError as e:
+            self.db.rollback()
+            logger.error(f"Ошибка целостности данных при обновлении пользователя: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Конфликт данных при обновлении профиля"
+            )
         except Exception as e:
             self.db.rollback()
-            logger.error(f"Ошибка обновления пользователя: {str(e)}")
+            logger.error(f"Неожиданная ошибка при обновлении пользователя: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Ошибка обновления пользователя"
@@ -210,9 +230,12 @@ class AuthService:
                     detail="Необходимо принять пользовательское соглашение"
                 )
                 
+        except HTTPException:
+            self.db.rollback()
+            raise
         except Exception as e:
             self.db.rollback()
-            logger.error(f"Ошибка принятия соглашения: {str(e)}")
+            logger.error(f"Неожиданная ошибка при принятии соглашения: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Ошибка принятия соглашения"
@@ -239,9 +262,14 @@ class AuthService:
             user = self.get_user_by_telegram_id(telegram_id)
             return user
             
-        except Exception as e:
-            logger.error(f"Ошибка верификации Telegram: {str(e)}")
+        except HTTPException:
             raise
+        except Exception as e:
+            logger.error(f"Неожиданная ошибка при верификации Telegram: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Ошибка верификации Telegram"
+            )
     
     def get_profile_history(self, user_id: int) -> list:
         """Получить историю изменений профиля"""

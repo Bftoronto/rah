@@ -18,45 +18,104 @@ class RatingScreen {
 
     async render() {
         const container = document.getElementById('app');
-        container.innerHTML = `
-            <div class="rating-screen">
-                <div class="rating-header">
-                    <button class="back-btn" onclick="app.navigate('profile')">
-                        <i class="fas fa-arrow-left"></i>
-                    </button>
-                    <h1>Рейтинги и отзывы</h1>
-                </div>
-
-                <div class="rating-summary" id="ratingSummary">
-                    <div class="loading">Загрузка...</div>
-                </div>
-
-                <div class="rating-tabs">
-                    <button class="tab-btn active" data-tab="ratings">
-                        <i class="fas fa-star"></i>
-                        Рейтинги
-                    </button>
-                    <button class="tab-btn" data-tab="reviews">
-                        <i class="fas fa-comment"></i>
-                        Отзывы
-                    </button>
-                </div>
-
-                <div class="rating-content">
-                    <div class="tab-content active" id="ratingsTab">
-                        <div class="rating-stats" id="ratingStats"></div>
-                        <div class="rating-list" id="ratingList"></div>
-                        <div class="pagination" id="ratingPagination"></div>
-                    </div>
-
-                    <div class="tab-content" id="reviewsTab">
-                        <div class="review-stats" id="reviewStats"></div>
-                        <div class="review-list" id="reviewList"></div>
-                        <div class="pagination" id="reviewPagination"></div>
-                    </div>
-                </div>
-            </div>
-        `;
+        
+        // Безопасное создание HTML
+        const ratingScreen = document.createElement('div');
+        ratingScreen.className = 'rating-screen';
+        
+        const header = document.createElement('div');
+        header.className = 'rating-header';
+        
+        const backBtn = document.createElement('button');
+        backBtn.className = 'back-btn';
+        backBtn.innerHTML = '<i class="fas fa-arrow-left"></i>';
+        backBtn.addEventListener('click', () => app.navigate('profile'));
+        
+        const title = document.createElement('h1');
+        title.textContent = 'Рейтинги и отзывы';
+        
+        header.appendChild(backBtn);
+        header.appendChild(title);
+        
+        const summary = document.createElement('div');
+        summary.className = 'rating-summary';
+        summary.id = 'ratingSummary';
+        
+        const loading = document.createElement('div');
+        loading.className = 'loading';
+        loading.textContent = 'Загрузка...';
+        summary.appendChild(loading);
+        
+        const tabs = document.createElement('div');
+        tabs.className = 'rating-tabs';
+        
+        const ratingsTab = document.createElement('button');
+        ratingsTab.className = 'tab-btn active';
+        ratingsTab.setAttribute('data-tab', 'ratings');
+        ratingsTab.innerHTML = '<i class="fas fa-star"></i> Рейтинги';
+        
+        const reviewsTab = document.createElement('button');
+        reviewsTab.className = 'tab-btn';
+        reviewsTab.setAttribute('data-tab', 'reviews');
+        reviewsTab.innerHTML = '<i class="fas fa-comment"></i> Отзывы';
+        
+        tabs.appendChild(ratingsTab);
+        tabs.appendChild(reviewsTab);
+        
+        const content = document.createElement('div');
+        content.className = 'rating-content';
+        
+        const ratingsContent = document.createElement('div');
+        ratingsContent.className = 'tab-content active';
+        ratingsContent.id = 'ratingsTab';
+        
+        const ratingStats = document.createElement('div');
+        ratingStats.className = 'rating-stats';
+        ratingStats.id = 'ratingStats';
+        
+        const ratingList = document.createElement('div');
+        ratingList.className = 'rating-list';
+        ratingList.id = 'ratingList';
+        
+        const ratingPagination = document.createElement('div');
+        ratingPagination.className = 'pagination';
+        ratingPagination.id = 'ratingPagination';
+        
+        ratingsContent.appendChild(ratingStats);
+        ratingsContent.appendChild(ratingList);
+        ratingsContent.appendChild(ratingPagination);
+        
+        const reviewsContent = document.createElement('div');
+        reviewsContent.className = 'tab-content';
+        reviewsContent.id = 'reviewsTab';
+        
+        const reviewStats = document.createElement('div');
+        reviewStats.className = 'review-stats';
+        reviewStats.id = 'reviewStats';
+        
+        const reviewList = document.createElement('div');
+        reviewList.className = 'review-list';
+        reviewList.id = 'reviewList';
+        
+        const reviewPagination = document.createElement('div');
+        reviewPagination.className = 'pagination';
+        reviewPagination.id = 'reviewPagination';
+        
+        reviewsContent.appendChild(reviewStats);
+        reviewsContent.appendChild(reviewList);
+        reviewsContent.appendChild(reviewPagination);
+        
+        content.appendChild(ratingsContent);
+        content.appendChild(reviewsContent);
+        
+        ratingScreen.appendChild(header);
+        ratingScreen.appendChild(summary);
+        ratingScreen.appendChild(tabs);
+        ratingScreen.appendChild(content);
+        
+        // Очищаем контейнер и добавляем безопасный HTML
+        container.innerHTML = '';
+        container.appendChild(ratingScreen);
 
         await this.loadSummary();
         await this.loadTabContent();
@@ -67,59 +126,82 @@ class RatingScreen {
             const response = await api.get(`/rating/user/${this.currentUserId}/summary`);
             const summary = response.data;
 
-            const summaryHtml = `
-                <div class="summary-grid">
-                    <div class="summary-card">
-                        <div class="summary-icon">
-                            <i class="fas fa-star"></i>
-                        </div>
-                        <div class="summary-content">
-                            <div class="summary-value">${summary.average_rating.toFixed(1)}</div>
-                            <div class="summary-label">Средний рейтинг</div>
-                            <div class="summary-sub">${summary.total_ratings} оценок</div>
-                        </div>
-                    </div>
-
-                    <div class="summary-card">
-                        <div class="summary-icon">
-                            <i class="fas fa-comment"></i>
-                        </div>
-                        <div class="summary-content">
-                            <div class="summary-value">${summary.total_reviews}</div>
-                            <div class="summary-label">Всего отзывов</div>
-                            <div class="summary-sub">${summary.positive_percentage}% положительных</div>
-                        </div>
-                    </div>
-
-                    <div class="summary-card">
-                        <div class="summary-icon">
-                            <i class="fas fa-thumbs-up"></i>
-                        </div>
-                        <div class="summary-content">
-                            <div class="summary-value">${summary.positive_reviews}</div>
-                            <div class="summary-label">Положительных</div>
-                            <div class="summary-sub">отзывов</div>
-                        </div>
-                    </div>
-
-                    <div class="summary-card">
-                        <div class="summary-icon">
-                            <i class="fas fa-thumbs-down"></i>
-                        </div>
-                        <div class="summary-content">
-                            <div class="summary-value">${summary.negative_reviews}</div>
-                            <div class="summary-label">Отрицательных</div>
-                            <div class="summary-sub">отзывов</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            document.getElementById('ratingSummary').innerHTML = summaryHtml;
+            const summaryContainer = document.getElementById('ratingSummary');
+            summaryContainer.innerHTML = '';
+            
+            const summaryGrid = document.createElement('div');
+            summaryGrid.className = 'summary-grid';
+            
+            // Создаем карточки сводки безопасно
+            const cards = [
+                {
+                    icon: 'fas fa-star',
+                    value: summary.average_rating.toFixed(1),
+                    label: 'Средний рейтинг',
+                    sub: `${summary.total_ratings} оценок`
+                },
+                {
+                    icon: 'fas fa-comment',
+                    value: summary.total_reviews.toString(),
+                    label: 'Всего отзывов',
+                    sub: `${summary.positive_percentage}% положительных`
+                },
+                {
+                    icon: 'fas fa-thumbs-up',
+                    value: summary.positive_reviews.toString(),
+                    label: 'Положительных',
+                    sub: 'отзывов'
+                },
+                {
+                    icon: 'fas fa-thumbs-down',
+                    value: summary.negative_reviews.toString(),
+                    label: 'Отрицательных',
+                    sub: 'отзывов'
+                }
+            ];
+            
+            cards.forEach(card => {
+                const cardElement = document.createElement('div');
+                cardElement.className = 'summary-card';
+                
+                const icon = document.createElement('div');
+                icon.className = 'summary-icon';
+                icon.innerHTML = `<i class="${card.icon}"></i>`;
+                
+                const content = document.createElement('div');
+                content.className = 'summary-content';
+                
+                const value = document.createElement('div');
+                value.className = 'summary-value';
+                value.textContent = card.value;
+                
+                const label = document.createElement('div');
+                label.className = 'summary-label';
+                label.textContent = card.label;
+                
+                const sub = document.createElement('div');
+                sub.className = 'summary-sub';
+                sub.textContent = card.sub;
+                
+                content.appendChild(value);
+                content.appendChild(label);
+                content.appendChild(sub);
+                
+                cardElement.appendChild(icon);
+                cardElement.appendChild(content);
+                summaryGrid.appendChild(cardElement);
+            });
+            
+            summaryContainer.appendChild(summaryGrid);
         } catch (error) {
             console.error('Ошибка загрузки сводки:', error);
-            document.getElementById('ratingSummary').innerHTML = 
-                '<div class="error">Ошибка загрузки данных</div>';
+            const summaryContainer = document.getElementById('ratingSummary');
+            summaryContainer.innerHTML = '';
+            
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = 'Ошибка загрузки данных';
+            summaryContainer.appendChild(errorDiv);
         }
     }
 
@@ -136,49 +218,99 @@ class RatingScreen {
             const response = await api.get(`/rating/user/${this.currentUserId}?page=${page}&limit=10`);
             const data = response.data;
 
-            // Отображаем статистику рейтингов
-            const statsHtml = `
-                <div class="rating-distribution">
-                    <h3>Распределение оценок</h3>
-                    <div class="distribution-bars">
-                        ${[5, 4, 3, 2, 1].map(stars => {
-                            const count = data.rating_distribution[stars] || 0;
-                            const percentage = data.total_ratings > 0 ? (count / data.total_ratings * 100) : 0;
-                            return `
-                                <div class="distribution-item">
-                                    <div class="stars">${'★'.repeat(stars)}${'☆'.repeat(5-stars)}</div>
-                                    <div class="bar-container">
-                                        <div class="bar" style="width: ${percentage}%"></div>
-                                    </div>
-                                    <div class="count">${count}</div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-            `;
-            document.getElementById('ratingStats').innerHTML = statsHtml;
+            // Отображаем статистику рейтингов безопасно
+            const statsContainer = document.getElementById('ratingStats');
+            statsContainer.innerHTML = '';
+            
+            const distribution = document.createElement('div');
+            distribution.className = 'rating-distribution';
+            
+            const title = document.createElement('h3');
+            title.textContent = 'Распределение оценок';
+            
+            const bars = document.createElement('div');
+            bars.className = 'distribution-bars';
+            
+            [5, 4, 3, 2, 1].forEach(stars => {
+                const count = data.rating_distribution[stars] || 0;
+                const percentage = data.total_ratings > 0 ? (count / data.total_ratings * 100) : 0;
+                
+                const item = document.createElement('div');
+                item.className = 'distribution-item';
+                
+                const starsElement = document.createElement('div');
+                starsElement.className = 'stars';
+                starsElement.textContent = '★'.repeat(stars) + '☆'.repeat(5-stars);
+                
+                const barContainer = document.createElement('div');
+                barContainer.className = 'bar-container';
+                
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                bar.style.width = `${percentage}%`;
+                
+                const countElement = document.createElement('div');
+                countElement.className = 'count';
+                countElement.textContent = count.toString();
+                
+                barContainer.appendChild(bar);
+                item.appendChild(starsElement);
+                item.appendChild(barContainer);
+                item.appendChild(countElement);
+                bars.appendChild(item);
+            });
+            
+            distribution.appendChild(title);
+            distribution.appendChild(bars);
+            statsContainer.appendChild(distribution);
 
-            // Отображаем список рейтингов
-            const ratingsHtml = data.ratings.map(rating => `
-                <div class="rating-item">
-                    <div class="rating-header">
-                        <div class="rating-stars">
-                            ${'★'.repeat(rating.rating)}${'☆'.repeat(5-rating.rating)}
-                        </div>
-                        <div class="rating-date">
-                            ${new Date(rating.created_at).toLocaleDateString('ru-RU')}
-                        </div>
-                    </div>
-                    ${rating.comment ? `<div class="rating-comment">${rating.comment}</div>` : ''}
-                    <div class="rating-author">
-                        <i class="fas fa-user"></i>
-                        ${rating.from_user?.full_name || 'Пользователь'}
-                    </div>
-                </div>
-            `).join('') || '<div class="empty-state">Пока нет оценок</div>';
-
-            document.getElementById('ratingList').innerHTML = ratingsHtml;
+            // Отображаем список рейтингов безопасно
+            const listContainer = document.getElementById('ratingList');
+            listContainer.innerHTML = '';
+            
+            if (data.ratings && data.ratings.length > 0) {
+                data.ratings.forEach(rating => {
+                    const item = document.createElement('div');
+                    item.className = 'rating-item';
+                    
+                    const header = document.createElement('div');
+                    header.className = 'rating-header';
+                    
+                    const stars = document.createElement('div');
+                    stars.className = 'rating-stars';
+                    stars.textContent = '★'.repeat(rating.rating) + '☆'.repeat(5-rating.rating);
+                    
+                    const date = document.createElement('div');
+                    date.className = 'rating-date';
+                    date.textContent = new Date(rating.created_at).toLocaleDateString('ru-RU');
+                    
+                    header.appendChild(stars);
+                    header.appendChild(date);
+                    item.appendChild(header);
+                    
+                    if (rating.comment) {
+                        const comment = document.createElement('div');
+                        comment.className = 'rating-comment';
+                        comment.textContent = rating.comment;
+                        item.appendChild(comment);
+                    }
+                    
+                    const author = document.createElement('div');
+                    author.className = 'rating-author';
+                    author.innerHTML = '<i class="fas fa-user"></i>';
+                    const authorName = document.createElement('span');
+                    authorName.textContent = rating.from_user?.full_name || 'Пользователь';
+                    author.appendChild(authorName);
+                    item.appendChild(author);
+                    
+                    listContainer.appendChild(item);
+                });
+            } else {
+                const emptyState = document.createElement('div');
+                emptyState.className = 'empty-state';
+                emptyState.textContent = 'Пока нет оценок';
+                listContainer.appendChild(emptyState);
+            }
 
             // Отображаем пагинацию
             this.renderPagination('ratingPagination', data.page, data.total_pages, (page) => {
@@ -187,8 +319,13 @@ class RatingScreen {
 
         } catch (error) {
             console.error('Ошибка загрузки рейтингов:', error);
-            document.getElementById('ratingList').innerHTML = 
-                '<div class="error">Ошибка загрузки рейтингов</div>';
+            const listContainer = document.getElementById('ratingList');
+            listContainer.innerHTML = '';
+            
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = 'Ошибка загрузки рейтингов';
+            listContainer.appendChild(errorDiv);
         }
     }
 
@@ -197,46 +334,86 @@ class RatingScreen {
             const response = await api.get(`/rating/user/${this.currentUserId}/reviews?page=${page}&limit=10`);
             const data = response.data;
 
-            // Отображаем статистику отзывов
-            const statsHtml = `
-                <div class="review-stats-summary">
-                    <div class="stat-item">
-                        <div class="stat-value positive">${data.positive_reviews}</div>
-                        <div class="stat-label">Положительных</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value negative">${data.negative_reviews}</div>
-                        <div class="stat-label">Отрицательных</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${data.positive_percentage}%</div>
-                        <div class="stat-label">Положительных</div>
-                    </div>
-                </div>
-            `;
-            document.getElementById('reviewStats').innerHTML = statsHtml;
+            // Отображаем статистику отзывов безопасно
+            const statsContainer = document.getElementById('reviewStats');
+            statsContainer.innerHTML = '';
+            
+            const statsSummary = document.createElement('div');
+            statsSummary.className = 'review-stats-summary';
+            
+            const stats = [
+                { value: data.positive_reviews, label: 'Положительных', className: 'positive' },
+                { value: data.negative_reviews, label: 'Отрицательных', className: 'negative' },
+                { value: `${data.positive_percentage}%`, label: 'Положительных', className: '' }
+            ];
+            
+            stats.forEach(stat => {
+                const item = document.createElement('div');
+                item.className = 'stat-item';
+                
+                const value = document.createElement('div');
+                value.className = `stat-value ${stat.className}`;
+                value.textContent = stat.value;
+                
+                const label = document.createElement('div');
+                label.className = 'stat-label';
+                label.textContent = stat.label;
+                
+                item.appendChild(value);
+                item.appendChild(label);
+                statsSummary.appendChild(item);
+            });
+            
+            statsContainer.appendChild(statsSummary);
 
-            // Отображаем список отзывов
-            const reviewsHtml = data.reviews.map(review => `
-                <div class="review-item ${review.is_positive ? 'positive' : 'negative'}">
-                    <div class="review-header">
-                        <div class="review-type">
-                            <i class="fas fa-${review.is_positive ? 'thumbs-up' : 'thumbs-down'}"></i>
-                            ${review.is_positive ? 'Положительный' : 'Отрицательный'}
-                        </div>
-                        <div class="review-date">
-                            ${new Date(review.created_at).toLocaleDateString('ru-RU')}
-                        </div>
-                    </div>
-                    <div class="review-text">${review.text}</div>
-                    <div class="review-author">
-                        <i class="fas fa-user"></i>
-                        ${review.from_user?.full_name || 'Пользователь'}
-                    </div>
-                </div>
-            `).join('') || '<div class="empty-state">Пока нет отзывов</div>';
-
-            document.getElementById('reviewList').innerHTML = reviewsHtml;
+            // Отображаем список отзывов безопасно
+            const listContainer = document.getElementById('reviewList');
+            listContainer.innerHTML = '';
+            
+            if (data.reviews && data.reviews.length > 0) {
+                data.reviews.forEach(review => {
+                    const item = document.createElement('div');
+                    item.className = `review-item ${review.is_positive ? 'positive' : 'negative'}`;
+                    
+                    const header = document.createElement('div');
+                    header.className = 'review-header';
+                    
+                    const type = document.createElement('div');
+                    type.className = 'review-type';
+                    type.innerHTML = `<i class="fas fa-${review.is_positive ? 'thumbs-up' : 'thumbs-down'}"></i>`;
+                    const typeText = document.createElement('span');
+                    typeText.textContent = review.is_positive ? 'Положительный' : 'Отрицательный';
+                    type.appendChild(typeText);
+                    
+                    const date = document.createElement('div');
+                    date.className = 'review-date';
+                    date.textContent = new Date(review.created_at).toLocaleDateString('ru-RU');
+                    
+                    header.appendChild(type);
+                    header.appendChild(date);
+                    item.appendChild(header);
+                    
+                    const text = document.createElement('div');
+                    text.className = 'review-text';
+                    text.textContent = review.text;
+                    item.appendChild(text);
+                    
+                    const author = document.createElement('div');
+                    author.className = 'review-author';
+                    author.innerHTML = '<i class="fas fa-user"></i>';
+                    const authorName = document.createElement('span');
+                    authorName.textContent = review.from_user?.full_name || 'Пользователь';
+                    author.appendChild(authorName);
+                    item.appendChild(author);
+                    
+                    listContainer.appendChild(item);
+                });
+            } else {
+                const emptyState = document.createElement('div');
+                emptyState.className = 'empty-state';
+                emptyState.textContent = 'Пока нет отзывов';
+                listContainer.appendChild(emptyState);
+            }
 
             // Отображаем пагинацию
             this.renderPagination('reviewPagination', data.page, data.total_pages, (page) => {
@@ -245,8 +422,13 @@ class RatingScreen {
 
         } catch (error) {
             console.error('Ошибка загрузки отзывов:', error);
-            document.getElementById('reviewList').innerHTML = 
-                '<div class="error">Ошибка загрузки отзывов</div>';
+            const listContainer = document.getElementById('reviewList');
+            listContainer.innerHTML = '';
+            
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = 'Ошибка загрузки отзывов';
+            listContainer.appendChild(errorDiv);
         }
     }
 

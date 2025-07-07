@@ -6,26 +6,56 @@ class ChatScreen {
     }
 
     render() {
-        return `
-            <div class="chat-container">
-                <div class="chat-messages" id="chatMessages">
-                    ${this.stateManager.getChatMessages().map(message => `
-                        <div class="message ${message.sender === 'user' ? 'sent' : 'received'}">
-                            <div class="message-content">
-                                ${message.text}
-                                <div class="message-time">${window.utils.formatTime(message.timestamp)}</div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-                <div class="chat-input-container">
-                    <textarea class="chat-input" id="chatInput" placeholder="Введите сообщение..." rows="1"></textarea>
-                    <button class="send-btn" id="sendMessage" disabled>
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </div>
-            </div>
-        `;
+        const chatContainer = document.createElement('div');
+        chatContainer.className = 'chat-container';
+        
+        const messagesContainer = document.createElement('div');
+        messagesContainer.className = 'chat-messages';
+        messagesContainer.id = 'chatMessages';
+        
+        // Безопасно создаем сообщения
+        this.stateManager.getChatMessages().forEach(message => {
+            const messageElement = document.createElement('div');
+            messageElement.className = `message ${message.sender === 'user' ? 'sent' : 'received'}`;
+            
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            
+            const text = document.createElement('div');
+            text.textContent = message.text;
+            
+            const time = document.createElement('div');
+            time.className = 'message-time';
+            time.textContent = window.utils.formatTime(message.timestamp);
+            
+            content.appendChild(text);
+            content.appendChild(time);
+            messageElement.appendChild(content);
+            messagesContainer.appendChild(messageElement);
+        });
+        
+        const inputContainer = document.createElement('div');
+        inputContainer.className = 'chat-input-container';
+        
+        const textarea = document.createElement('textarea');
+        textarea.className = 'chat-input';
+        textarea.id = 'chatInput';
+        textarea.placeholder = 'Введите сообщение...';
+        textarea.rows = 1;
+        
+        const sendBtn = document.createElement('button');
+        sendBtn.className = 'send-btn';
+        sendBtn.id = 'sendMessage';
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+        
+        inputContainer.appendChild(textarea);
+        inputContainer.appendChild(sendBtn);
+        
+        chatContainer.appendChild(messagesContainer);
+        chatContainer.appendChild(inputContainer);
+        
+        return chatContainer.outerHTML;
     }
 
     setupEventHandlers() {
@@ -93,16 +123,24 @@ class ChatScreen {
                 };
                 this.stateManager.addChatMessage(driverMessage);
                 
-                // Обновляем экран чата
+                // Обновляем экран чата безопасно
                 const messagesContainer = document.getElementById('chatMessages');
                 const messageElement = document.createElement('div');
                 messageElement.className = 'message received';
-                messageElement.innerHTML = `
-                    <div class="message-content">
-                        ${driverMessage.text}
-                        <div class="message-time">${window.utils.formatTime(driverMessage.timestamp)}</div>
-                    </div>
-                `;
+                
+                const content = document.createElement('div');
+                content.className = 'message-content';
+                
+                const text = document.createElement('div');
+                text.textContent = driverMessage.text;
+                
+                const time = document.createElement('div');
+                time.className = 'message-time';
+                time.textContent = window.utils.formatTime(driverMessage.timestamp);
+                
+                content.appendChild(text);
+                content.appendChild(time);
+                messageElement.appendChild(content);
                 messagesContainer.appendChild(messageElement);
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }, 2000);

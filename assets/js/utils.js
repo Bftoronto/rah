@@ -135,37 +135,42 @@ export const Utils = {
     },
     
     // Обработка ошибок API
-    handleApiError: (error, context = '') => {
-        console.error(`API Error in ${context}:`, error);
-        
-        let message = 'Произошла ошибка. Попробуйте еще раз.';
-        
-        if (error.response) {
-            switch (error.response.status) {
-                case 400:
-                    message = 'Неверные данные. Проверьте введенную информацию.';
-                    break;
-                case 401:
-                    message = 'Необходима авторизация.';
-                    break;
-                case 403:
-                    message = 'Доступ запрещен.';
-                    break;
-                case 404:
-                    message = 'Данные не найдены.';
-                    break;
-                case 500:
-                    message = ERROR_MESSAGES.SERVER_ERROR;
-                    break;
-                default:
-                    message = error.response.data?.message || message;
-            }
-        } else if (error.request) {
-            message = ERROR_MESSAGES.NETWORK_ERROR;
+    handleApiError: (error, context = 'API') => {
+        // Убираем console.error для продакшена, оставляем только логирование в dev режиме
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.error(`API Error in ${context}:`, error);
         }
         
-        Utils.showNotification('Ошибка', message, 'error');
-        return message;
+        let message = 'Произошла ошибка при выполнении запроса';
+        
+        if (error.response) {
+            const status = error.response.status;
+            const data = error.response.data;
+            
+            if (status === 401) {
+                message = 'Необходима авторизация';
+                // Перенаправляем на страницу входа
+                setTimeout(() => {
+                    app.navigate('login');
+                }, 2000);
+            } else if (status === 403) {
+                message = 'Доступ запрещен';
+            } else if (status === 404) {
+                message = 'Запрашиваемый ресурс не найден';
+            } else if (status === 422) {
+                message = data?.detail || 'Неверные данные';
+            } else if (status >= 500) {
+                message = 'Ошибка сервера. Попробуйте позже';
+            } else if (data?.detail) {
+                message = data.detail;
+            }
+        } else if (error.request) {
+            message = 'Нет соединения с сервером';
+        } else if (error.message) {
+            message = error.message;
+        }
+        
+        Utils.showNotification(message, 'error');
     },
     
     // Загрузка изображений

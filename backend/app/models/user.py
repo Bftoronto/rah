@@ -69,6 +69,12 @@ class User(Base):
         Index('idx_user_status', 'is_active', 'is_verified', 'is_driver'),
         Index('idx_user_rating_balance', 'average_rating', 'balance'),
         Index('idx_user_created', 'created_at'),
+        Index('idx_user_city', 'city'),  # Для поиска по городу
+        Index('idx_user_birth_date', 'birth_date'),  # Для возрастных ограничений
+        Index('idx_user_driver_license', 'driver_license_number'),  # Для проверки водительских прав
+        Index('idx_user_car_info', 'car_brand', 'car_model'),  # Для поиска по автомобилю
+        Index('idx_user_updated', 'updated_at'),  # Для отслеживания изменений
+        Index('idx_user_rating_reviews', 'average_rating', 'reviews'),  # Для рейтингов
     )
 
 class ProfileChangeLog(Base):

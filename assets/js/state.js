@@ -200,20 +200,42 @@ export class StateManager {
     // Сохранение состояния в localStorage с валидацией
     saveToStorage() {
         try {
+            // Создаем копию состояния без больших объектов
+            const stateToSave = { ...this.state };
+            
+            // Удаляем большие объекты для экономии места
+            delete stateToSave.images;
+            delete stateToSave.chat;
+            
+            const stateString = JSON.stringify(stateToSave);
+            
             // Проверяем размер данных перед сохранением
-            const stateString = JSON.stringify(this.state);
-            if (stateString.length > 1024 * 1024) { // 1MB лимит
-                console.warn('State too large, truncating...');
-                // Удаляем большие объекты
-                const truncatedState = { ...this.state };
-                delete truncatedState.images;
-                delete truncatedState.chat;
-                localStorage.setItem('pax-app-state', JSON.stringify(truncatedState));
+            if (stateString.length > 512 * 1024) { // 512KB лимит
+                // Удаляем дополнительные объекты
+                delete stateToSave.rides;
+                delete stateToSave.notifications;
+                
+                const truncatedString = JSON.stringify(stateToSave);
+                if (truncatedString.length > 256 * 1024) { // 256KB лимит
+                    // Сохраняем только критически важные данные
+                    const criticalData = {
+                        currentScreen: stateToSave.currentScreen,
+                        userData: stateToSave.userData,
+                        selectedDate: stateToSave.selectedDate,
+                        selectedTime: stateToSave.selectedTime
+                    };
+                    localStorage.setItem('pax-app-state', JSON.stringify(criticalData));
+                } else {
+                    localStorage.setItem('pax-app-state', truncatedString);
+                }
             } else {
                 localStorage.setItem('pax-app-state', stateString);
             }
         } catch (error) {
-            console.error('Error saving state to storage:', error);
+            // Тихо обрабатываем ошибки localStorage
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                console.error('Error saving state to storage:', error);
+            }
         }
     }
     
@@ -226,13 +248,29 @@ export class StateManager {
                 
                 // Валидация загруженных данных
                 if (parsedState && typeof parsedState === 'object') {
-                    this.updateState(parsedState);
+                    // Проверяем наличие обязательных полей
+                    const requiredFields = ['currentScreen', 'userData'];
+                    const isValid = requiredFields.every(field => 
+                        parsedState.hasOwnProperty(field) && 
+                        parsedState[field] !== null && 
+                        parsedState[field] !== undefined
+                    );
+                    
+                    if (isValid) {
+                        this.updateState(parsedState);
+                    } else {
+                        // Очищаем невалидные данные
+                        localStorage.removeItem('pax-app-state');
+                    }
                 } else {
-                    console.warn('Invalid state data in storage, using defaults');
+                    localStorage.removeItem('pax-app-state');
                 }
             }
         } catch (error) {
-            console.error('Error loading state from storage:', error);
+            // Тихо обрабатываем ошибки localStorage
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                console.error('Error loading state from storage:', error);
+            }
             // Очищаем поврежденные данные
             localStorage.removeItem('pax-app-state');
         }
