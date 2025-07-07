@@ -7,14 +7,14 @@ const API_CONFIG = {
         baseURL: 'http://localhost:8000',
         timeout: 10000
     },
-    // GitHub Pages (демо)
+    // Продакшен (Render)
     production: {
-        baseURL: 'https://rah.pages.dev/api',
+        baseURL: 'https://pax-backend-2gng.onrender.com',
         timeout: 15000
     },
     // Telegram Mini App
     telegram: {
-        baseURL: 'https://your-backend-domain.com/api',
+        baseURL: 'https://pax-backend-2gng.onrender.com',
         timeout: 10000
     }
 };
