@@ -8,7 +8,6 @@ from fastapi import HTTPException, status
 from ..models.ride import Ride
 from ..models.user import User
 from ..schemas.ride import RideCreate, RideUpdate, RideRead
-from ..utils.validators import validate_ride_data
 from ..database import get_db
 
 logger = logging.getLogger(__name__)
