@@ -65,8 +65,8 @@ settings = Settings()
 def validate_settings():
     """Проверка обязательных настроек"""
     required_settings = [
-        "database_url",
-        "telegram_bot_token"
+        "database_url"
+        # "telegram_bot_token" - делаем необязательным для тестирования
     ]
     
     missing_settings = []

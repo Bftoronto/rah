@@ -149,9 +149,11 @@ export const Utils = {
             
             if (status === 401) {
                 message = 'Необходима авторизация';
-                // Перенаправляем на страницу входа
+                // Перенаправляем на страницу ограничения
                 setTimeout(() => {
-                    app.navigate('login');
+                    if (window.router) {
+                        window.router.navigate('restricted');
+                    }
                 }, 2000);
             } else if (status === 403) {
                 message = 'Доступ запрещен';
@@ -170,7 +172,7 @@ export const Utils = {
             message = error.message;
         }
         
-        Utils.showNotification(message, 'error');
+        Utils.showNotification('Ошибка', message, 'error');
     },
     
     // Загрузка изображений

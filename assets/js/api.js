@@ -130,7 +130,7 @@ export const API = {
         return { success: true };
     },
     
-    // Обновление профиля пользователя
+    // Обновление профиля пользователя (базовый метод)
     async updateUserProfile(profileData) {
         return this.request('/profile', { method: 'PUT', body: JSON.stringify(profileData) });
     },
@@ -167,7 +167,7 @@ export const API = {
         }
     },
 
-    async updateUserProfile(userId, userData) {
+    async updateUserProfileAuth(userId, userData) {
         try {
             const response = await this.request(`/auth/profile/${userId}`, {
                 method: 'PUT',
