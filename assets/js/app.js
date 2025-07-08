@@ -128,47 +128,37 @@ class App {
 
     async loadInitialData() {
         try {
-            // Проверяем, авторизован ли пользователь через Telegram
             if (window.Telegram && window.Telegram.WebApp) {
                 const tg = window.Telegram.WebApp;
-                const telegramData = tg.initDataUnsafe?.user;
-                
-                if (telegramData) {
-                    // Верифицируем пользователя через Telegram
-                    const verificationResult = await API.verifyTelegramUser(telegramData);
-                    
+                const telegramInitData = tg.initDataUnsafe;
+                if (telegramInitData && telegramInitData.id) {
+                    // Передаем весь initDataUnsafe, а не только user
+                    const verificationResult = await API.verifyTelegramUser(telegramInitData);
                     if (verificationResult.exists) {
-                        // Пользователь существует, загружаем его данные
                         const user = verificationResult.user;
                         stateManager.updateUserData(user);
-                        
-                        // Определяем начальный экран
                         if (user.balance <= 0) {
                             await this.router.navigate('restricted');
                         } else {
                             await this.router.navigate('findRide');
                         }
                     } else {
-                        // Пользователь не найден, начинаем регистрацию
-                        // Сохраняем данные Telegram для регистрации
                         stateManager.setState('registrationData', {
                             telegramData: verificationResult.telegram_data
                         });
-                        
                         await this.router.navigate('privacyPolicy');
                     }
                 } else {
-                    // Нет данных Telegram, показываем экран ограничения
+                    Utils.showNotification('Ошибка', 'Нет данных Telegram. Откройте приложение через Telegram.', 'error');
                     await this.router.navigate('restricted');
                 }
             } else {
-                // Telegram Web App не доступен
+                Utils.showNotification('Ошибка', 'Приложение доступно только через Telegram.', 'error');
                 await this.router.navigate('restricted');
             }
-            
         } catch (error) {
             console.error('Ошибка загрузки данных пользователя:', error);
-            Utils.handleApiError(error, 'initApp');
+            Utils.showNotification('Ошибка', 'Ошибка загрузки данных пользователя', 'error');
             await this.router.navigate('restricted');
         }
     }
