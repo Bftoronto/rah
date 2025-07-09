@@ -74,9 +74,27 @@ class PrivacyPolicyScreen {
         }
 
         if (continueBtn) {
-            continueBtn.addEventListener('click', () => {
+            continueBtn.addEventListener('click', async () => {
                 if (this.isAccepted) {
-                    window.router.navigate('basicInfo');
+                    try {
+                        // Принимаем пользовательское соглашение
+                        const privacyData = {
+                            accepted: true,
+                            version: "1.1"
+                        };
+                        
+                        // Получаем текущего пользователя (если есть)
+                        const currentUser = stateManager.getState('currentUser');
+                        if (currentUser) {
+                            await API.acceptPrivacyPolicy(currentUser.id, privacyData);
+                        }
+                        
+                        window.router.navigate('basicInfo');
+                    } catch (error) {
+                        console.error('Ошибка принятия соглашения:', error);
+                        // Продолжаем даже если не удалось принять соглашение
+                        window.router.navigate('basicInfo');
+                    }
                 }
             });
         }
@@ -209,23 +227,158 @@ class BasicInfoScreen {
         }
     }
 
-    validateAndContinue() {
-        // Логика валидации и продолжения
-        console.log('Валидация и продолжение');
-        window.router.navigate('driverInfo');
+    async validateAndContinue() {
+        try {
+            const form = document.getElementById('basicInfoForm');
+            if (!form) return;
+            
+            // Собираем данные формы
+            const formData = {
+                telegram_id: this.telegramData?.id,
+                username: this.telegramData?.username,
+                full_name: document.getElementById('fullName').value,
+                phone: document.getElementById('phone').value,
+                birth_date: document.getElementById('birthDate').value,
+                city: document.getElementById('city').value,
+                avatar_url: document.getElementById('avatarUrl').value,
+                is_driver: false, // Будет установлено на следующем экране
+                privacy_policy_accepted: true,
+                privacy_policy_version: "1.1"
+            };
+            
+            // Валидация данных
+            if (!formData.full_name || formData.full_name.trim().length < 2) {
+                Utils.showNotification('Ошибка', 'Введите корректное ФИО', 'error');
+                return;
+            }
+            
+            if (!formData.phone || formData.phone.length < 10) {
+                Utils.showNotification('Ошибка', 'Введите корректный номер телефона', 'error');
+                return;
+            }
+            
+            if (!formData.birth_date) {
+                Utils.showNotification('Ошибка', 'Выберите дату рождения', 'error');
+                return;
+            }
+            
+            if (!formData.city || formData.city.trim().length < 2) {
+                Utils.showNotification('Ошибка', 'Введите город проживания', 'error');
+                return;
+            }
+            
+            // Проверяем возраст (18+)
+            const birthDate = new Date(formData.birth_date);
+            const today = new Date();
+            const age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            
+            if (age < 18 || (age === 18 && monthDiff < 0)) {
+                Utils.showNotification('Ошибка', 'Вам должно быть не менее 18 лет', 'error');
+                return;
+            }
+            
+            // Сохраняем данные в состоянии
+            stateManager.setState('registrationData', formData);
+            
+            // Переходим к следующему экрану
+            window.router.navigate('driverInfo');
+            
+        } catch (error) {
+            console.error('Ошибка валидации:', error);
+            Utils.showNotification('Ошибка', 'Ошибка при валидации данных', 'error');
+        }
     }
 
     async uploadAvatar() {
-        // Логика загрузки аватара
-        console.log('Загрузка аватара');
+        try {
+            // Создаем input для выбора файла
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            
+            input.onchange = async (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                // Валидация файла
+                if (file.size > 5 * 1024 * 1024) { // 5MB
+                    Utils.showNotification('Ошибка', 'Размер файла не должен превышать 5MB', 'error');
+                    return;
+                }
+                
+                if (!file.type.startsWith('image/')) {
+                    Utils.showNotification('Ошибка', 'Выберите изображение', 'error');
+                    return;
+                }
+                
+                try {
+                    // Создаем FormData для отправки файла
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    // Отправляем файл через API
+                    const response = await API.uploadUserAvatar(formData);
+                    
+                    if (response.success) {
+                        // Обновляем превью аватара
+                        const avatarPreview = document.getElementById('avatarPreview');
+                        const avatarUrl = document.getElementById('avatarUrl');
+                        
+                        if (avatarPreview) {
+                            avatarPreview.innerHTML = `<img src="${response.file_url}" alt="Аватар">`;
+                        }
+                        
+                        if (avatarUrl) {
+                            avatarUrl.value = response.file_url;
+                        }
+                        
+                        Utils.showNotification('Успех', 'Аватар успешно загружен', 'success');
+                    } else {
+                        Utils.showNotification('Ошибка', 'Не удалось загрузить аватар', 'error');
+                    }
+                } catch (error) {
+                    console.error('Ошибка загрузки аватара:', error);
+                    Utils.showNotification('Ошибка', 'Не удалось загрузить аватар', 'error');
+                }
+            };
+            
+            input.click();
+        } catch (error) {
+            console.error('Ошибка загрузки аватара:', error);
+            Utils.showNotification('Ошибка', 'Ошибка при выборе файла', 'error');
+        }
     }
 
     async getTelegramData() {
-        // Получение данных из Telegram
-        if (window.Telegram && window.Telegram.WebApp) {
-            return window.Telegram.WebApp.initDataUnsafe?.user || {};
+        try {
+            // Получаем данные из Telegram Web App
+            const telegram = window.Telegram?.WebApp;
+            if (!telegram) {
+                throw new Error('Telegram Web App не доступен');
+            }
+            
+            const userData = telegram.initDataUnsafe?.user || null;
+            if (!userData) {
+                throw new Error('Данные пользователя Telegram не найдены');
+            }
+            
+            // Верифицируем данные через API
+            const verificationData = {
+                user: userData,
+                auth_date: telegram.initDataUnsafe?.auth_date,
+                hash: telegram.initDataUnsafe?.hash,
+                initData: telegram.initData
+            };
+            
+            const response = await API.verifyTelegram(verificationData);
+            return response.telegram_data || userData;
+        } catch (error) {
+            console.error('Ошибка получения данных Telegram:', error);
+            // Возвращаем базовые данные если верификация не удалась
+            const telegram = window.Telegram?.WebApp;
+            return telegram?.initDataUnsafe?.user || {};
         }
-        return {};
     }
 }
 
@@ -323,10 +476,58 @@ class DriverInfoScreen {
         }
     }
 
-    completeRegistration() {
-        // Логика завершения регистрации
-        console.log('Завершение регистрации');
-        window.router.navigate('findRide');
+    async completeRegistration() {
+        try {
+            const form = document.getElementById('driverInfoForm');
+            if (!form) return;
+            
+            // Получаем данные из предыдущего экрана
+            const basicData = stateManager.getState('registrationData');
+            if (!basicData) {
+                Utils.showNotification('Ошибка', 'Данные регистрации не найдены', 'error');
+                return;
+            }
+            
+            // Собираем данные водителя
+            const hasLicense = document.getElementById('hasLicense').checked;
+            const driverData = {
+                license_number: document.getElementById('licenseNumber').value,
+                car_model: document.getElementById('carModel').value,
+                car_year: document.getElementById('carYear').value,
+                car_color: document.getElementById('carColor').value,
+                car_plate: document.getElementById('carPlate').value
+            };
+            
+            // Объединяем данные
+            const registrationData = {
+                ...basicData,
+                is_driver: hasLicense,
+                driver_license_number: hasLicense ? driverData.license_number : null,
+                car_brand: hasLicense ? driverData.car_model.split(' ')[0] : null,
+                car_model: hasLicense ? driverData.car_model : null,
+                car_year: hasLicense ? parseInt(driverData.car_year) : null,
+                car_color: hasLicense ? driverData.car_color : null
+            };
+            
+            // Регистрируем пользователя
+            const response = await API.registerUser(registrationData);
+            
+            if (response.success) {
+                // Сохраняем данные пользователя в состоянии
+                stateManager.setState('currentUser', response.user);
+                
+                Utils.showNotification('Успех', 'Регистрация завершена успешно!', 'success');
+                
+                // Переходим к главному экрану
+                window.router.navigate('findRide');
+            } else {
+                Utils.showNotification('Ошибка', 'Не удалось завершить регистрацию', 'error');
+            }
+            
+        } catch (error) {
+            console.error('Ошибка завершения регистрации:', error);
+            Utils.showNotification('Ошибка', 'Ошибка при завершении регистрации', 'error');
+        }
     }
 }
 

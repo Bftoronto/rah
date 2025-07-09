@@ -191,24 +191,33 @@ class App {
                         API.verifyTelegramUser(verificationData)
                     );
                     
-                    if (verificationResult && verificationResult.exists) {
-                        // Пользователь существует, загружаем его данные
-                        const userData = await this.retryWithBackoff(() => 
-                            API.getUserProfile(verificationResult.user_id)
+                    // Пытаемся войти в систему с JWT
+                    try {
+                        const loginResult = await this.retryWithBackoff(() => 
+                            API.login(verificationData)
                         );
                         
-                        if (userData) {
-                            stateManager.updateUserData(userData);
-                            if (userData.balance <= 0) {
+                        if (loginResult.success) {
+                            // Пользователь успешно авторизован
+                            stateManager.updateUserData(loginResult.user);
+                            
+                            // Проверяем баланс и перенаправляем
+                            if (loginResult.user.balance <= 0) {
                                 await this.router.navigate('restricted');
                             } else {
                                 await this.router.navigate('findRide');
                             }
                         } else {
-                            throw new Error('Не удалось загрузить данные пользователя');
+                            // Пользователь не найден, показываем регистрацию
+                            stateManager.setState('registrationData', {
+                                telegramData: telegramInitData.user
+                            });
+                            await this.router.navigate('privacyPolicy');
                         }
-                    } else {
-                        // Новый пользователь, показываем экран регистрации
+                    } catch (error) {
+                        console.error('Ошибка авторизации:', error);
+                        
+                        // В случае ошибки показываем регистрацию
                         stateManager.setState('registrationData', {
                             telegramData: telegramInitData.user
                         });

@@ -1,5 +1,79 @@
 import { Utils } from './utils.js';
 
+// JWT Token Management
+let accessToken = null;
+let refreshToken = null;
+let currentUser = null;
+
+// Функция для установки токенов авторизации
+function setAuthTokens(tokens) {
+    if (tokens.access_token) {
+        accessToken = tokens.access_token;
+        localStorage.setItem('accessToken', tokens.access_token);
+    }
+    if (tokens.refresh_token) {
+        refreshToken = tokens.refresh_token;
+        localStorage.setItem('refreshToken', tokens.refresh_token);
+    }
+}
+
+// Функция для получения access токена
+function getAccessToken() {
+    if (!accessToken) {
+        accessToken = localStorage.getItem('accessToken');
+    }
+    return accessToken;
+}
+
+// Функция для получения refresh токена
+function getRefreshToken() {
+    if (!refreshToken) {
+        refreshToken = localStorage.getItem('refreshToken');
+    }
+    return refreshToken;
+}
+
+// Функция для очистки токенов авторизации
+function clearAuthTokens() {
+    accessToken = null;
+    refreshToken = null;
+    currentUser = null;
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('currentUser');
+}
+
+// Функция для обновления токенов
+async function refreshAuthTokens() {
+    try {
+        const refreshToken = getRefreshToken();
+        if (!refreshToken) {
+            throw new Error('No refresh token available');
+        }
+
+        const response = await fetch(`${currentConfig.baseURL}/api/auth/refresh`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ refresh_token: refreshToken })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            setAuthTokens(data.tokens);
+            return true;
+        } else {
+            clearAuthTokens();
+            return false;
+        }
+    } catch (error) {
+        console.error('Error refreshing tokens:', error);
+        clearAuthTokens();
+        return false;
+    }
+}
+
 // Конфигурация API
 const API_CONFIG = {
     // Локальная разработка
@@ -38,14 +112,75 @@ const getEnvironment = () => {
 
 const currentConfig = API_CONFIG[getEnvironment()];
 
+// Класс для обработки ошибок API
+class ApiError extends Error {
+    constructor(status, message, data = null) {
+        super(message);
+        this.name = 'ApiError';
+        this.status = status;
+        this.data = data;
+        this.timestamp = new Date();
+    }
+}
+
+// Класс для кэширования
+class CacheManager {
+    constructor() {
+        this.cache = new Map();
+        this.ttl = 5 * 60 * 1000; // 5 минут
+    }
+
+    get(key) {
+        const item = this.cache.get(key);
+        if (item && Date.now() - item.timestamp < this.ttl) {
+            return item.data;
+        }
+        this.cache.delete(key);
+        return null;
+    }
+
+    set(key, data) {
+        this.cache.set(key, {
+            data,
+            timestamp: Date.now()
+        });
+    }
+
+    clear() {
+        this.cache.clear();
+    }
+
+    invalidate(pattern) {
+        for (const key of this.cache.keys()) {
+            if (key.includes(pattern)) {
+                this.cache.delete(key);
+            }
+        }
+    }
+}
+
+// Глобальный экземпляр кэша
+const cacheManager = new CacheManager();
+
 // API клиент для работы с сервером
 export const API = {
-    // Общий метод для запросов
+    // Общий метод для запросов с JWT авторизацией
     async request(endpoint, options = {}) {
         const url = `${currentConfig.baseURL}${endpoint}`;
+        
+        // Определяем, нужно ли устанавливать Content-Type
+        const isFormData = options.body instanceof FormData;
+        const headers = isFormData ? {} : { 'Content-Type': 'application/json' };
+        
+        // Добавляем JWT токен если доступен
+        const token = getAccessToken();
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        
         const config = {
             headers: {
-                'Content-Type': 'application/json',
+                ...headers,
                 ...options.headers
             },
             ...options
@@ -54,76 +189,243 @@ export const API = {
         try {
             const response = await fetch(url, config);
             
+            // Если получили 401, пытаемся обновить токен
+            if (response.status === 401) {
+                const refreshed = await refreshAuthTokens();
+                if (refreshed) {
+                    // Повторяем запрос с новым токеном
+                    const newToken = getAccessToken();
+                    if (newToken) {
+                        config.headers['Authorization'] = `Bearer ${newToken}`;
+                        const retryResponse = await fetch(url, config);
+                        
+                        if (!retryResponse.ok) {
+                            const errorData = await retryResponse.json().catch(() => ({}));
+                            throw new ApiError(retryResponse.status, `HTTP error! status: ${retryResponse.status}`, errorData);
+                        }
+                        
+                        return await retryResponse.json();
+                    }
+                } else {
+                    // Не удалось обновить токен, очищаем и перенаправляем на логин
+                    clearAuthTokens();
+                    window.location.href = '/registration.html';
+                    throw new ApiError(401, 'Authentication failed');
+                }
+            }
+            
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                const error = new Error(`HTTP error! status: ${response.status}`);
-                error.response = response;
-                error.data = errorData;
-                throw error;
+                throw new ApiError(response.status, `HTTP error! status: ${response.status}`, errorData);
             }
             
             return await response.json();
         } catch (error) {
             console.error('API request failed:', error);
+            
+            // Логируем ошибку для мониторинга
+            if (error instanceof ApiError) {
+                this.logError(error);
+            }
+            
             throw error;
+        }
+    },
+
+    // Логирование ошибок для мониторинга
+    logError(error) {
+        const errorLog = {
+            timestamp: new Date().toISOString(),
+            error: error.message,
+            status: error.status,
+            data: error.data,
+            url: window.location.href,
+            userAgent: navigator.userAgent
+        };
+        
+        // В продакшене отправляем в систему мониторинга
+        if (getEnvironment() === 'production') {
+            // Здесь можно добавить отправку в Sentry или другую систему
+            console.error('Production error:', errorLog);
         }
     },
     
     // Получение данных пользователя
     async getUserData() {
-        return this.request('/profile', { method: 'GET' });
+        const cacheKey = 'user_data';
+        const cached = cacheManager.get(cacheKey);
+        if (cached) return cached;
+        
+        const data = await this.request('/api/profile', { method: 'GET' });
+        cacheManager.set(cacheKey, data);
+        return data;
     },
     
-    // Поиск поездок
+    // Поиск поездок (ИСПРАВЛЕНО)
     async getRides(from, to, date) {
-        return this.request(`/rides?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&date=${encodeURIComponent(date)}`, { method: 'GET' });
+        const params = new URLSearchParams({
+            from_location: from,
+            to_location: to,
+            date_from: date instanceof Date ? date.toISOString() : date
+        });
+        
+        return this.request(`/api/rides/search?${params.toString()}`, { method: 'GET' });
     },
     
-    // Бронирование поездки
+    // Бронирование поездки (ИСПРАВЛЕНО)
     async bookRide(rideId) {
-        return this.request(`/rides/${rideId}/book`, { method: 'POST' });
+        return this.request(`/api/rides/${rideId}/book`, { method: 'POST' });
     },
     
     // Создание поездки
     async createRide(rideData) {
-        return this.request('/rides', { method: 'POST', body: JSON.stringify(rideData) });
+        const data = await this.request('/api/rides', { method: 'POST', body: JSON.stringify(rideData) });
+        cacheManager.invalidate('rides'); // Инвалидируем кэш поездок
+        return data;
     },
     
-
+    // Получение детальной информации о поездке
+    async getRideDetails(rideId) {
+        const cacheKey = `ride_${rideId}`;
+        const cached = cacheManager.get(cacheKey);
+        if (cached) return cached;
+        
+        const data = await this.request(`/api/rides/${rideId}`, { method: 'GET' });
+        cacheManager.set(cacheKey, data);
+        return data;
+    },
     
     // Получение моих поездок
     async getMyRides() {
-        return this.request('/rides/my', { method: 'GET' });
+        const cacheKey = 'my_rides';
+        const cached = cacheManager.get(cacheKey);
+        if (cached) return cached;
+        
+        const data = await this.request('/api/rides/user/me', { method: 'GET' });
+        cacheManager.set(cacheKey, data);
+        return data;
     },
     
     // Получение сообщений чата
-    async getChatMessages(chatId) {
-        return this.request(`/chat/${chatId}`, { method: 'GET' });
+    async getChatMessages(chatId, limit = 50, offset = 0) {
+        const params = new URLSearchParams({
+            limit: limit.toString(),
+            offset: offset.toString()
+        });
+        
+        return this.request(`/api/chat/${chatId}/messages?${params.toString()}`, { method: 'GET' });
     },
     
     // Отправка сообщения
     async sendMessage(chatId, message) {
-        return this.request(`/chat/${chatId}`, { method: 'POST', body: JSON.stringify({ message }) });
+        return this.request(`/api/chat/${chatId}/send`, { 
+            method: 'POST', 
+            body: JSON.stringify({ message }) 
+        });
     },
     
-    // Загрузка аватара пользователя
+    // Получение списка чатов
+    async getMyChats(limit = 50, offset = 0) {
+        const params = new URLSearchParams({
+            limit: limit.toString(),
+            offset: offset.toString()
+        });
+        
+        return this.request(`/api/chat?${params.toString()}`, { method: 'GET' });
+    },
+    
+    // Создание чата для поездки
+    async createChatForRide(rideId) {
+        return this.request(`/api/chat/ride/${rideId}/start`, { method: 'POST' });
+    },
+    
+    // Загрузка аватара пользователя (ИСПРАВЛЕНО)
     async uploadUserAvatar(imageData) {
-        return this.request('/upload', { method: 'POST', body: JSON.stringify({ file: imageData, type: 'avatar' }) });
+        const formData = new FormData();
+        formData.append('file', imageData);
+        formData.append('file_type', 'avatar');
+        
+        const data = await this.request('/api/upload/', { 
+            method: 'POST', 
+            body: formData,
+            headers: {} // Не устанавливаем Content-Type для FormData
+        });
+        
+        // Инвалидируем кэш пользователя
+        cacheManager.invalidate('user_data');
+        return data;
     },
     
-    // Загрузка фото автомобиля
+    // Загрузка фото автомобиля (ИСПРАВЛЕНО)
     async uploadCarPhoto(imageData) {
-        return this.request('/upload', { method: 'POST', body: JSON.stringify({ file: imageData, type: 'car' }) });
+        const formData = new FormData();
+        formData.append('file', imageData);
+        formData.append('file_type', 'car');
+        
+        const data = await this.request('/api/upload/', { 
+            method: 'POST', 
+            body: formData,
+            headers: {} // Не устанавливаем Content-Type для FormData
+        });
+        
+        // Инвалидируем кэш пользователя
+        cacheManager.invalidate('user_data');
+        return data;
     },
     
-    // Загрузка фото паспорта
-    async uploadPassportPhoto(imageData) {
-        return this.request('/upload', { method: 'POST', body: JSON.stringify({ file: imageData, type: 'passport' }) });
+    // Загрузка фото водительских прав (ИСПРАВЛЕНО)
+    async uploadDriverLicense(imageData) {
+        const formData = new FormData();
+        formData.append('file', imageData);
+        formData.append('file_type', 'license');
+        
+        const data = await this.request('/api/upload/', { 
+            method: 'POST', 
+            body: formData,
+            headers: {} // Не устанавливаем Content-Type для FormData
+        });
+        
+        // Инвалидируем кэш пользователя
+        cacheManager.invalidate('user_data');
+        return data;
     },
     
-    // Подписка на уведомления (заглушка)
+    // Универсальная загрузка файлов
+    async uploadFile(file, fileType) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('file_type', fileType);
+        
+        const data = await this.request('/api/upload/', { 
+            method: 'POST', 
+            body: formData,
+            headers: {}
+        });
+        
+        // Инвалидируем соответствующие кэши
+        if (fileType === 'avatar') {
+            cacheManager.invalidate('user_data');
+        }
+        
+        return data;
+    },
+    
+    // Подписка на уведомления
     async subscribeToNotifications() {
-        return { success: true, subscriptionId: 'sub_' + Date.now() };
+        return this.request('/api/notifications/subscribe', { method: 'POST' });
+    },
+    
+    // Получение настроек уведомлений
+    async getNotificationSettings(userId) {
+        return this.request(`/api/notifications/settings/${userId}`, { method: 'GET' });
+    },
+    
+    // Обновление настроек уведомлений
+    async updateNotificationSettings(userId, settings) {
+        return this.request(`/api/notifications/settings/${userId}`, { 
+            method: 'PUT', 
+            body: JSON.stringify(settings) 
+        });
     },
     
     // Отправка уведомления (заглушка)
@@ -132,14 +434,92 @@ export const API = {
         return { success: true };
     },
     
-    // Обновление профиля пользователя (базовый метод)
+    // Обновление профиля пользователя
     async updateUserProfile(profileData) {
-        return this.request('/profile', { method: 'PUT', body: JSON.stringify(profileData) });
+        const data = await this.request('/api/profile', { 
+            method: 'PUT', 
+            body: JSON.stringify(profileData) 
+        });
+        
+        // Инвалидируем кэш пользователя
+        cacheManager.invalidate('user_data');
+        return data;
     },
     
     // Отмена поездки
     async cancelRide(rideId, reason, comment) {
-        return this.request(`/rides/${rideId}/cancel`, { method: 'POST', body: JSON.stringify({ reason, comment }) });
+        const params = new URLSearchParams({
+            is_driver: 'false'
+        });
+        
+        const data = await this.request(`/api/rides/${rideId}/cancel?${params.toString()}`, { 
+            method: 'PUT', 
+            body: JSON.stringify({ reason, comment }) 
+        });
+        
+        // Инвалидируем кэш поездок
+        cacheManager.invalidate('rides');
+        cacheManager.invalidate('my_rides');
+        return data;
+    },
+    
+    // Завершение поездки
+    async completeRide(rideId) {
+        const data = await this.request(`/api/rides/${rideId}/complete`, { method: 'PUT' });
+        
+        // Инвалидируем кэш поездок
+        cacheManager.invalidate('rides');
+        cacheManager.invalidate('my_rides');
+        return data;
+    },
+    
+    // JWT авторизация
+    async login(telegramData) {
+        try {
+            const response = await this.request('/api/auth/login', {
+                method: 'POST',
+                body: JSON.stringify(telegramData)
+            });
+            
+            if (response.success && response.tokens) {
+                setAuthTokens(response.tokens);
+                currentUser = response.user;
+                localStorage.setItem('currentUser', JSON.stringify(response.user));
+                
+                // Очищаем кэш при смене пользователя
+                cacheManager.clear();
+            }
+            
+            return response;
+        } catch (error) {
+            console.error('Login error:', error);
+            throw error;
+        }
+    },
+    
+    async logout() {
+        try {
+            await this.request('/api/auth/logout', { method: 'POST' });
+        } catch (error) {
+            console.error('Logout error:', error);
+        } finally {
+            clearAuthTokens();
+            cacheManager.clear();
+        }
+    },
+    
+    async getCurrentUser() {
+        try {
+            const response = await this.request('/api/auth/me', { method: 'GET' });
+            if (response.success) {
+                currentUser = response.user;
+                localStorage.setItem('currentUser', JSON.stringify(response.user));
+            }
+            return response;
+        } catch (error) {
+            console.error('Get current user error:', error);
+            throw error;
+        }
     },
     
     // Методы для регистрации и аутентификации
@@ -189,7 +569,7 @@ export const API = {
 
     async registerUser(userData) {
         try {
-            const response = await this.request('/auth/register', {
+            const response = await this.request('/api/auth/register', {
                 method: 'POST',
                 body: JSON.stringify(userData)
             });
@@ -202,10 +582,13 @@ export const API = {
 
     async updateUserProfileAuth(userId, userData) {
         try {
-            const response = await this.request(`/auth/profile/${userId}`, {
+            const response = await this.request(`/api/auth/profile/${userId}`, {
                 method: 'PUT',
                 body: JSON.stringify(userData)
             });
+            
+            // Инвалидируем кэш пользователя
+            cacheManager.invalidate('user_data');
             return response;
         } catch (error) {
             console.error('Ошибка обновления профиля:', error);
@@ -215,7 +598,7 @@ export const API = {
 
     async acceptPrivacyPolicy(userId, privacyData) {
         try {
-            const response = await this.request(`/auth/privacy-policy/accept/${userId}`, {
+            const response = await this.request(`/api/auth/privacy-policy/accept/${userId}`, {
                 method: 'POST',
                 body: JSON.stringify(privacyData)
             });
@@ -228,7 +611,7 @@ export const API = {
 
     async getPrivacyPolicy() {
         try {
-            const response = await this.request('/auth/privacy-policy', {
+            const response = await this.request('/api/auth/privacy-policy', {
                 method: 'GET'
             });
             return response;
@@ -239,10 +622,15 @@ export const API = {
     },
 
     async getUserProfile(userId) {
+        const cacheKey = `user_profile_${userId}`;
+        const cached = cacheManager.get(cacheKey);
+        if (cached) return cached;
+        
         try {
-            const response = await this.request(`/auth/profile/${userId}`, {
+            const response = await this.request(`/api/auth/profile/${userId}`, {
                 method: 'GET'
             });
+            cacheManager.set(cacheKey, response);
             return response;
         } catch (error) {
             console.error('Ошибка получения профиля:', error);
@@ -252,7 +640,7 @@ export const API = {
 
     async getProfileHistory(userId) {
         try {
-            const response = await this.request(`/auth/profile/${userId}/history`, {
+            const response = await this.request(`/api/auth/profile/${userId}/history`, {
                 method: 'GET'
             });
             return response;
@@ -265,7 +653,7 @@ export const API = {
     // Методы для работы с рейтингами и отзывами
     async createRating(ratingData) {
         try {
-            const response = await this.request('/rating', {
+            const response = await this.request('/api/rating', {
                 method: 'POST',
                 body: JSON.stringify(ratingData)
             });
@@ -278,7 +666,7 @@ export const API = {
 
     async createReview(reviewData) {
         try {
-            const response = await this.request('/rating/review', {
+            const response = await this.request('/api/rating/review', {
                 method: 'POST',
                 body: JSON.stringify(reviewData)
             });
@@ -290,8 +678,13 @@ export const API = {
     },
 
     async getUserRatings(userId, page = 1, limit = 10) {
+        const params = new URLSearchParams({
+            page: page.toString(),
+            limit: limit.toString()
+        });
+        
         try {
-            const response = await this.request(`/rating/user/${userId}?page=${page}&limit=${limit}`, {
+            const response = await this.request(`/api/rating/user/${userId}?${params.toString()}`, {
                 method: 'GET'
             });
             return response;
@@ -302,8 +695,13 @@ export const API = {
     },
 
     async getUserReviews(userId, page = 1, limit = 10) {
+        const params = new URLSearchParams({
+            page: page.toString(),
+            limit: limit.toString()
+        });
+        
         try {
-            const response = await this.request(`/rating/user/${userId}/reviews?page=${page}&limit=${limit}`, {
+            const response = await this.request(`/api/rating/user/${userId}/reviews?${params.toString()}`, {
                 method: 'GET'
             });
             return response;
@@ -314,10 +712,15 @@ export const API = {
     },
 
     async getUserRatingSummary(userId) {
+        const cacheKey = `rating_summary_${userId}`;
+        const cached = cacheManager.get(cacheKey);
+        if (cached) return cached;
+        
         try {
-            const response = await this.request(`/rating/user/${userId}/summary`, {
+            const response = await this.request(`/api/rating/user/${userId}/summary`, {
                 method: 'GET'
             });
+            cacheManager.set(cacheKey, response);
             return response;
         } catch (error) {
             console.error('Ошибка получения сводки рейтингов:', error);
@@ -327,7 +730,7 @@ export const API = {
 
     async getRideRatings(rideId) {
         try {
-            const response = await this.request(`/rating/ride/${rideId}`, {
+            const response = await this.request(`/api/rating/ride/${rideId}`, {
                 method: 'GET'
             });
             return response;
@@ -338,8 +741,12 @@ export const API = {
     },
 
     async getTopUsers(limit = 10) {
+        const params = new URLSearchParams({
+            limit: limit.toString()
+        });
+        
         try {
-            const response = await this.request(`/rating/top?limit=${limit}`, {
+            const response = await this.request(`/api/rating/top?${params.toString()}`, {
                 method: 'GET'
             });
             return response;
@@ -351,7 +758,7 @@ export const API = {
 
     async getRatingStatistics() {
         try {
-            const response = await this.request('/rating/statistics', {
+            const response = await this.request('/api/rating/statistics', {
                 method: 'GET'
             });
             return response;
@@ -363,7 +770,7 @@ export const API = {
 
     async updateRating(ratingId, ratingData) {
         try {
-            const response = await this.request(`/rating/${ratingId}`, {
+            const response = await this.request(`/api/rating/${ratingId}`, {
                 method: 'PUT',
                 body: JSON.stringify(ratingData)
             });
@@ -376,7 +783,7 @@ export const API = {
 
     async deleteRating(ratingId) {
         try {
-            const response = await this.request(`/rating/${ratingId}`, {
+            const response = await this.request(`/api/rating/${ratingId}`, {
                 method: 'DELETE'
             });
             return response;
@@ -384,5 +791,75 @@ export const API = {
             console.error('Ошибка удаления рейтинга:', error);
             throw error;
         }
+    },
+
+    async verifyTelegram(telegramData) {
+        return this.verifyTelegramUser(telegramData);
+    },
+
+    // Методы для модерации
+    async createReport(reportData) {
+        try {
+            const response = await this.request('/api/moderation/report', {
+                method: 'POST',
+                body: JSON.stringify(reportData)
+            });
+            return response;
+        } catch (error) {
+            console.error('Ошибка создания жалобы:', error);
+            throw error;
+        }
+    },
+
+    async checkContent(content) {
+        try {
+            const response = await this.request('/api/moderation/content/check', {
+                method: 'POST',
+                body: JSON.stringify({ content })
+            });
+            return response;
+        } catch (error) {
+            console.error('Ошибка проверки контента:', error);
+            throw error;
+        }
+    },
+
+    // Методы для работы с уведомлениями
+    async sendRideNotification(notificationData) {
+        try {
+            const response = await this.request('/api/notifications/send/ride', {
+                method: 'POST',
+                body: JSON.stringify(notificationData)
+            });
+            return response;
+        } catch (error) {
+            console.error('Ошибка отправки уведомления о поездке:', error);
+            throw error;
+        }
+    },
+
+    async sendSystemNotification(notificationData) {
+        try {
+            const response = await this.request('/api/notifications/send/system', {
+                method: 'POST',
+                body: JSON.stringify(notificationData)
+            });
+            return response;
+        } catch (error) {
+            console.error('Ошибка отправки системного уведомления:', error);
+            throw error;
+        }
+    },
+
+    // Утилиты
+    clearCache() {
+        cacheManager.clear();
+    },
+
+    getCacheStats() {
+        return {
+            size: cacheManager.cache.size,
+            keys: Array.from(cacheManager.cache.keys())
+        };
     }
 }; 

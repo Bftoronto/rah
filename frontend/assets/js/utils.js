@@ -7,6 +7,96 @@ const escapeHtml = (text) => {
     return div.innerHTML;
 };
 
+// Класс для обработки ошибок
+class ErrorHandler {
+    constructor() {
+        this.errorCount = 0;
+        this.lastErrorTime = 0;
+        this.maxErrorsPerMinute = 10;
+    }
+
+    handleError(error, context = 'unknown') {
+        const now = Date.now();
+        
+        // Сброс счетчика ошибок каждую минуту
+        if (now - this.lastErrorTime > 60000) {
+            this.errorCount = 0;
+        }
+        
+        this.errorCount++;
+        this.lastErrorTime = now;
+        
+        // Логируем ошибку для мониторинга
+        this.logError(error, context);
+        
+        // Показываем пользователю только если не превышен лимит
+        if (this.errorCount <= this.maxErrorsPerMinute) {
+            this.showUserFriendlyError(error);
+        }
+    }
+
+    logError(error, context) {
+        const errorLog = {
+            timestamp: new Date().toISOString(),
+            context,
+            message: error.message,
+            stack: error.stack,
+            url: window.location.href,
+            userAgent: navigator.userAgent,
+            errorType: error.constructor.name
+        };
+
+        // В продакшене отправляем в систему мониторинга
+        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            // Здесь можно добавить отправку в Sentry или другую систему
+            console.error('Production error:', errorLog);
+        } else {
+            console.error('Development error:', errorLog);
+        }
+    }
+
+    showUserFriendlyError(error) {
+        let message = 'Произошла ошибка при выполнении запроса';
+        
+        if (error.status) {
+            switch (error.status) {
+                case 401:
+                    message = 'Необходима авторизация';
+                    setTimeout(() => {
+                        if (window.router) {
+                            window.router.navigate('restricted');
+                        }
+                    }, 2000);
+                    break;
+                case 403:
+                    message = 'Доступ запрещен';
+                    break;
+                case 404:
+                    message = 'Запрашиваемый ресурс не найден';
+                    break;
+                case 422:
+                    message = error.data?.detail || 'Неверные данные';
+                    break;
+                case 429:
+                    message = 'Слишком много запросов. Попробуйте позже';
+                    break;
+                case 500:
+                    message = 'Ошибка сервера. Попробуйте позже';
+                    break;
+                default:
+                    message = error.data?.detail || message;
+            }
+        } else if (error.message) {
+            message = error.message;
+        }
+
+        Utils.showNotification('Ошибка', message, 'error');
+    }
+}
+
+// Глобальный обработчик ошибок
+const errorHandler = new ErrorHandler();
+
 // Утилиты для валидации и обработки ошибок
 export const Utils = {
     // Валидация полей
@@ -39,6 +129,19 @@ export const Utils = {
         
         if (rules.date && new Date(value) < new Date()) {
             errors.push(ERROR_MESSAGES.INVALID_DATE);
+        }
+        
+        // Дополнительные правила валидации
+        if (rules.telegramId && !/^\d+$/.test(value)) {
+            errors.push('ID Telegram должен содержать только цифры');
+        }
+        
+        if (rules.fileSize && value.size > rules.fileSize) {
+            errors.push(`Размер файла не должен превышать ${rules.fileSize / (1024 * 1024)}MB`);
+        }
+        
+        if (rules.fileType && !rules.fileType.includes(value.type)) {
+            errors.push('Неподдерживаемый тип файла');
         }
         
         return errors;
@@ -134,63 +237,28 @@ export const Utils = {
         }, 300);
     },
     
-    // Обработка ошибок API
+    // Обработка ошибок API (улучшенная версия)
     handleApiError: (error, context = 'API') => {
-        // Убираем console.error для продакшена, оставляем только логирование в dev режиме
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            console.error(`API Error in ${context}:`, error);
-        }
-        
-        let message = 'Произошла ошибка при выполнении запроса';
-        
-        if (error.response) {
-            const status = error.response.status;
-            const data = error.response.data;
-            
-            if (status === 401) {
-                message = 'Необходима авторизация';
-                // Перенаправляем на страницу ограничения
-                setTimeout(() => {
-                    if (window.router) {
-                        window.router.navigate('restricted');
-                    }
-                }, 2000);
-            } else if (status === 403) {
-                message = 'Доступ запрещен';
-            } else if (status === 404) {
-                message = 'Запрашиваемый ресурс не найден';
-            } else if (status === 422) {
-                message = data?.detail || 'Неверные данные';
-            } else if (status >= 500) {
-                message = 'Ошибка сервера. Попробуйте позже';
-            } else if (data?.detail) {
-                message = data.detail;
-            }
-        } else if (error.request) {
-            message = 'Нет соединения с сервером';
-        } else if (error.message) {
-            message = error.message;
-        }
-        
-        Utils.showNotification('Ошибка', message, 'error');
+        errorHandler.handleError(error, context);
     },
     
-    // Загрузка изображений
-    uploadImage: (file, onProgress, onSuccess, onError) => {
-        // Имитация загрузки изображения
-        const reader = new FileReader();
-        
-        if (file.size > APP_CONFIG.MAX_FILE_SIZE) {
-            onError(ERROR_MESSAGES.FILE_TOO_LARGE);
-            return;
-        }
-        
-        if (!file.type.startsWith('image/')) {
-            onError(ERROR_MESSAGES.INVALID_FILE_TYPE);
-            return;
-        }
-        
-        reader.onload = (e) => {
+    // Загрузка изображений с оптимизацией
+    uploadImage: async (file, onProgress, onSuccess, onError) => {
+        try {
+            // Валидация файла
+            if (file.size > APP_CONFIG.MAX_FILE_SIZE) {
+                onError(ERROR_MESSAGES.FILE_TOO_LARGE);
+                return;
+            }
+            
+            if (!file.type.startsWith('image/')) {
+                onError(ERROR_MESSAGES.INVALID_FILE_TYPE);
+                return;
+            }
+            
+            // Оптимизация изображения
+            const optimizedFile = await Utils.optimizeImage(file);
+            
             // Имитация прогресса загрузки
             let progress = 0;
             const interval = setInterval(() => {
@@ -198,106 +266,38 @@ export const Utils = {
                 if (progress >= 100) {
                     progress = 100;
                     clearInterval(interval);
-                    
-                    // Имитация успешной загрузки
-                    setTimeout(() => {
-                        onSuccess(e.target.result);
-                    }, 500);
+                    onSuccess(URL.createObjectURL(optimizedFile));
+                } else {
+                    onProgress(progress);
                 }
-                onProgress(progress);
-            }, 200);
-        };
-        
-        reader.onerror = () => {
-            onError('Ошибка чтения файла.');
-        };
-        
-        reader.readAsDataURL(file);
-    },
-    
-    // Форматирование времени
-    formatTime: (date) => {
-        return new Intl.DateTimeFormat('ru-RU', {
-            hour: '2-digit',
-            minute: '2-digit'
-        }).format(date);
-    },
-    
-    // Форматирование даты
-    formatDate: (date) => {
-        return new Intl.DateTimeFormat('ru-RU', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        }).format(date);
-    },
-    
-    // Форматирование даты для отображения
-    formatDisplayDate: (dateString) => {
-        const date = new Date(dateString);
-        const today = new Date();
-        const tomorrow = new Date();
-        tomorrow.setDate(today.getDate() + 1);
-        
-        const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-        const monthNames = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-        
-        if (date.toDateString() === today.toDateString()) return 'Сегодня';
-        if (date.toDateString() === tomorrow.toDateString()) return 'Завтра';
-        
-        return `${dayNames[date.getDay()]}, ${date.getDate()} ${monthNames[date.getMonth()]}`;
-    },
-    
-    // Показ toast уведомлений
-    showToast: (message, type = 'info', duration = 3000) => {
-        const toast = document.createElement('div');
-        toast.className = `notification alert-${type}`;
-        toast.style.position = 'fixed';
-        toast.style.bottom = '20px';
-        toast.style.left = '50%';
-        toast.style.transform = 'translateX(-50%)';
-        toast.style.zIndex = '10000';
-        toast.style.padding = '12px 20px';
-        toast.style.borderRadius = '8px';
-        toast.style.color = 'white';
-        toast.style.fontWeight = '500';
-        toast.style.fontSize = '14px';
-        toast.style.opacity = '0';
-        toast.style.transition = 'opacity 0.3s, transform 0.3s';
-        
-        if (type === 'success') {
-            toast.style.backgroundColor = '#4CAF50';
-        } else if (type === 'error') {
-            toast.style.backgroundColor = '#f44336';
-        } else {
-            toast.style.backgroundColor = '#2196F3';
+            }, 100);
+            
+        } catch (error) {
+            onError(error.message);
         }
-        
-        toast.textContent = message;
-        document.body.appendChild(toast);
-        
-        // Анимация появления
-        setTimeout(() => {
-            toast.style.opacity = '1';
-            toast.style.transform = 'translateX(-50%) translateY(0)';
-        }, 100);
-        
-        // Автоматическое скрытие
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(-50%) translateY(20px)';
-            setTimeout(() => {
-                if (toast.parentNode) {
-                    toast.parentNode.removeChild(toast);
-                }
-            }, 300);
-        }, duration);
     },
     
-    // Очистка ошибок формы
-    clearFormErrors: () => {
-        document.querySelectorAll('.form-control.error').forEach(field => {
-            Utils.hideFieldError(field);
+    // Оптимизация изображений
+    optimizeImage: async (file, maxSize = 1024, quality = 0.8) => {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = () => {
+                // Вычисляем новые размеры
+                const ratio = Math.min(maxSize / img.width, maxSize / img.height);
+                canvas.width = img.width * ratio;
+                canvas.height = img.height * ratio;
+                
+                // Рисуем изображение с новыми размерами
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                
+                // Конвертируем в blob
+                canvas.toBlob(resolve, 'image/jpeg', quality);
+            };
+            
+            img.src = URL.createObjectURL(file);
         });
     },
     
@@ -306,150 +306,273 @@ export const Utils = {
         const errors = {};
         let isValid = true;
         
-        Object.keys(rules).forEach(fieldName => {
-            const value = formData[fieldName];
-            const fieldRules = rules[fieldName];
-            const fieldErrors = Utils.validateField(value, fieldRules);
-            
-            if (fieldErrors.length > 0) {
-                errors[fieldName] = fieldErrors[0];
-                isValid = false;
+        for (const [fieldName, fieldRules] of Object.entries(rules)) {
+            const field = document.getElementById(fieldName);
+            if (field) {
+                const fieldErrors = Utils.validateField(field.value, fieldRules);
+                if (fieldErrors.length > 0) {
+                    errors[fieldName] = fieldErrors[0];
+                    isValid = false;
+                }
             }
-        });
+        }
         
         return { isValid, errors };
     },
     
     // Показ ошибок формы
     showFormErrors: (errors) => {
-        Object.keys(errors).forEach(fieldName => {
+        for (const [fieldName, error] of Object.entries(errors)) {
             const field = document.getElementById(fieldName);
             if (field) {
-                Utils.showFieldError(field, errors[fieldName]);
+                Utils.showFieldError(field, error);
             }
+        }
+    },
+    
+    // Очистка ошибок формы
+    clearFormErrors: () => {
+        const errorMessages = document.querySelectorAll('.error-message');
+        errorMessages.forEach(element => {
+            element.style.display = 'none';
         });
+        
+        const errorFields = document.querySelectorAll('.error');
+        errorFields.forEach(field => {
+            field.classList.remove('error');
+        });
+    },
+    
+    // Форматирование даты
+    formatDisplayDate: (date) => {
+        if (!date) return '';
+        
+        const d = new Date(date);
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        if (d.toDateString() === today.toDateString()) {
+            return 'Сегодня';
+        } else if (d.toDateString() === tomorrow.toDateString()) {
+            return 'Завтра';
+        } else {
+            return d.toLocaleDateString('ru-RU', {
+                day: 'numeric',
+                month: 'long'
+            });
+        }
+    },
+    
+    // Форматирование времени
+    formatTime: (time) => {
+        if (!time) return '';
+        
+        const d = new Date(time);
+        return d.toLocaleTimeString('ru-RU', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    },
+    
+    // Валидация телефона
+    validatePhone: (phone) => {
+        const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
+        return /^\+?[0-9]{10,}$/.test(cleanPhone);
+    },
+    
+    // Форматирование телефона
+    formatPhone: (phone) => {
+        const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
+        if (cleanPhone.length === 11 && cleanPhone.startsWith('8')) {
+            return '+7' + cleanPhone.slice(1);
+        }
+        return cleanPhone;
+    },
+    
+    // Debounce функция
+    debounce: (func, wait) => {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    },
+    
+    // Throttle функция
+    throttle: (func, limit) => {
+        let inThrottle;
+        return function() {
+            const args = arguments;
+            const context = this;
+            if (!inThrottle) {
+                func.apply(context, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        };
+    },
+    
+    // Безопасное создание HTML
+    createSafeHTML: (template) => {
+        const div = document.createElement('div');
+        div.innerHTML = template;
+        return div.firstElementChild;
+    },
+    
+    // Проверка онлайн статуса
+    isOnline: () => {
+        return navigator.onLine;
+    },
+    
+    // Обработчик офлайн/онлайн событий
+    setupOnlineHandler: () => {
+        window.addEventListener('online', () => {
+            Utils.showNotification('Соединение восстановлено', 'Интернет-соединение активно', 'success');
+        });
+        
+        window.addEventListener('offline', () => {
+            Utils.showNotification('Нет соединения', 'Проверьте интернет-соединение', 'warning');
+        });
+    },
+    
+    // Сохранение в localStorage с обработкой ошибок
+    saveToStorage: (key, value) => {
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+            return true;
+        } catch (error) {
+            console.error('Ошибка сохранения в localStorage:', error);
+            return false;
+        }
+    },
+    
+    // Загрузка из localStorage с обработкой ошибок
+    loadFromStorage: (key, defaultValue = null) => {
+        try {
+            const item = localStorage.getItem(key);
+            return item ? JSON.parse(item) : defaultValue;
+        } catch (error) {
+            console.error('Ошибка загрузки из localStorage:', error);
+            return defaultValue;
+        }
+    },
+    
+    // Очистка localStorage
+    clearStorage: () => {
+        try {
+            localStorage.clear();
+            return true;
+        } catch (error) {
+            console.error('Ошибка очистки localStorage:', error);
+            return false;
+        }
+    },
+    
+    // Генерация уникального ID
+    generateId: () => {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    },
+    
+    // Копирование в буфер обмена
+    copyToClipboard: async (text) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            Utils.showNotification('Скопировано', 'Текст скопирован в буфер обмена', 'success');
+            return true;
+        } catch (error) {
+            console.error('Ошибка копирования:', error);
+            return false;
+        }
+    },
+    
+    // Проверка поддержки функций браузера
+    checkBrowserSupport: () => {
+        const support = {
+            fetch: typeof fetch !== 'undefined',
+            localStorage: typeof localStorage !== 'undefined',
+            clipboard: navigator.clipboard && navigator.clipboard.writeText,
+            webSocket: typeof WebSocket !== 'undefined',
+            fileReader: typeof FileReader !== 'undefined'
+        };
+        
+        return support;
+    },
+    
+    // Получение информации о браузере
+    getBrowserInfo: () => {
+        return {
+            userAgent: navigator.userAgent,
+            language: navigator.language,
+            platform: navigator.platform,
+            cookieEnabled: navigator.cookieEnabled,
+            onLine: navigator.onLine
+        };
+    },
+    
+    // Мониторинг производительности
+    measurePerformance: (name, fn) => {
+        const start = performance.now();
+        const result = fn();
+        const end = performance.now();
+        
+        console.log(`${name} выполнился за ${(end - start).toFixed(2)}ms`);
+        return result;
+    },
+    
+    // Асинхронная версия measurePerformance
+    measureAsyncPerformance: async (name, fn) => {
+        const start = performance.now();
+        const result = await fn();
+        const end = performance.now();
+        
+        console.log(`${name} выполнился за ${(end - start).toFixed(2)}ms`);
+        return result;
     }
 };
 
-/**
- * Показывает уведомление в приложении
- * @param {string} message - Текст уведомления
- * @param {string} type - Тип уведомления (success, error, warning, info)
- * @param {number} duration - Длительность показа в миллисекундах
- */
+// Экспорт для обратной совместимости
 export function showNotification(message, type = 'info', duration = 5000) {
-    // Удаляем существующие уведомления
-    const existingNotifications = document.querySelectorAll('.app-notification');
-    existingNotifications.forEach(notification => {
-        notification.remove();
-    });
-
-    // Создаем новое уведомление безопасно
-    const notification = document.createElement('div');
-    notification.className = `app-notification ${type}`;
-    
-    const content = document.createElement('div');
-    content.className = 'notification-content';
-    
-    const messageElement = document.createElement('div');
-    messageElement.className = 'notification-message';
-    messageElement.textContent = message;
-    
-    const closeButton = document.createElement('button');
-    closeButton.className = 'notification-close';
-    closeButton.innerHTML = '<i class="fas fa-times"></i>';
-    closeButton.addEventListener('click', () => {
-        notification.remove();
-    });
-    
-    content.appendChild(messageElement);
-    content.appendChild(closeButton);
-    notification.appendChild(content);
-
-    // Добавляем в DOM
-    document.body.appendChild(notification);
-
-    // Автоматически скрываем через указанное время
-    if (duration > 0) {
-        setTimeout(() => {
-            if (notification.parentElement) {
-                notification.classList.add('hide');
-                setTimeout(() => {
-                    if (notification.parentElement) {
-                        notification.remove();
-                    }
-                }, 300);
-            }
-        }, duration);
-    }
-
-    return notification;
+    return Utils.showNotification('Уведомление', message, type, duration);
 }
 
-/**
- * Показывает модальное окно подтверждения
- * @param {string} title - Заголовок
- * @param {string} message - Сообщение
- * @param {string} confirmText - Текст кнопки подтверждения
- * @param {string} cancelText - Текст кнопки отмены
- * @returns {Promise<boolean>} - Результат выбора пользователя
- */
 export function showConfirmDialog(title, message, confirmText = 'Подтвердить', cancelText = 'Отмена') {
     return new Promise((resolve) => {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3>${escapeHtml(title)}</h3>
+                <p>${escapeHtml(message)}</p>
+                <div class="modal-buttons">
+                    <button class="btn btn-secondary" id="cancelBtn">${escapeHtml(cancelText)}</button>
+                    <button class="btn btn-primary" id="confirmBtn">${escapeHtml(confirmText)}</button>
+                </div>
+            </div>
+        `;
         
-        const content = document.createElement('div');
-        content.className = 'modal-content';
-        
-        const header = document.createElement('div');
-        header.className = 'modal-header';
-        const titleElement = document.createElement('h3');
-        titleElement.textContent = title;
-        header.appendChild(titleElement);
-        
-        const body = document.createElement('div');
-        body.className = 'modal-body';
-        const messageElement = document.createElement('p');
-        messageElement.textContent = message;
-        body.appendChild(messageElement);
-        
-        const footer = document.createElement('div');
-        footer.className = 'modal-footer';
-        
-        const cancelBtn = document.createElement('button');
-        cancelBtn.className = 'btn btn-secondary cancel-btn';
-        cancelBtn.textContent = cancelText;
-        
-        const confirmBtn = document.createElement('button');
-        confirmBtn.className = 'btn btn-primary confirm-btn';
-        confirmBtn.textContent = confirmText;
-        
-        footer.appendChild(cancelBtn);
-        footer.appendChild(confirmBtn);
-        
-        content.appendChild(header);
-        content.appendChild(body);
-        content.appendChild(footer);
-        modal.appendChild(content);
-
         document.body.appendChild(modal);
-
+        
         const cleanup = () => {
-            modal.remove();
+            if (modal.parentNode) {
+                modal.parentNode.removeChild(modal);
+            }
         };
-
-        confirmBtn.addEventListener('click', () => {
+        
+        modal.querySelector('#confirmBtn').addEventListener('click', () => {
             cleanup();
             resolve(true);
         });
-
-        cancelBtn.addEventListener('click', () => {
+        
+        modal.querySelector('#cancelBtn').addEventListener('click', () => {
             cleanup();
             resolve(false);
         });
-
-        // Закрытие по клику вне модального окна
+        
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
                 cleanup();
@@ -459,136 +582,54 @@ export function showConfirmDialog(title, message, confirmText = 'Подтвер�
     });
 }
 
-/**
- * Показывает модальное окно с загрузкой
- * @param {string} message - Сообщение загрузки
- * @returns {Function} - Функция для скрытия загрузки
- */
 export function showLoadingModal(message = 'Загрузка...') {
     const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
+    modal.className = 'loading-modal';
+    modal.innerHTML = `
+        <div class="loading-content">
+            <div class="loader"></div>
+            <p>${escapeHtml(message)}</p>
+        </div>
+    `;
     
-    const content = document.createElement('div');
-    content.className = 'modal-content loading-modal';
-    
-    const loader = document.createElement('div');
-    loader.className = 'loader';
-    
-    const messageElement = document.createElement('p');
-    messageElement.textContent = message;
-    
-    content.appendChild(loader);
-    content.appendChild(messageElement);
-    modal.appendChild(content);
-
     document.body.appendChild(modal);
-
-    return () => {
-        modal.remove();
-    };
-}
-
-/**
- * Форматирует дату в удобочитаемый вид
- * @param {string|Date} date - Дата для форматирования
- * @returns {string} - Отформатированная дата
- */
-export function formatDate(date) {
-    if (!date) return '';
     
-    const d = new Date(date);
-    const now = new Date();
-    const diffTime = Math.abs(now - d);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 1) {
-        return 'Сегодня';
-    } else if (diffDays === 2) {
-        return 'Вчера';
-    } else if (diffDays <= 7) {
-        return `${diffDays - 1} дней назад`;
-    } else {
-        return d.toLocaleDateString('ru-RU', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
-    }
-}
-
-/**
- * Форматирует время
- * @param {string} time - Время в формате HH:MM
- * @returns {string} - Отформатированное время
- */
-export function formatTime(time) {
-    if (!time) return '';
-    
-    const [hours, minutes] = time.split(':');
-    return `${hours}:${minutes}`;
-}
-
-/**
- * Валидирует номер телефона
- * @param {string} phone - Номер телефона
- * @returns {boolean} - Результат валидации
- */
-export function validatePhone(phone) {
-    const phoneRegex = /^\+7\s?\(?[0-9]{3}\)?\s?[0-9]{3}-?[0-9]{2}-?[0-9]{2}$/;
-    return phoneRegex.test(phone);
-}
-
-/**
- * Форматирует номер телефона
- * @param {string} phone - Номер телефона
- * @returns {string} - Отформатированный номер
- */
-export function formatPhone(phone) {
-    if (!phone) return '';
-    
-    // Убираем все нецифровые символы
-    const digits = phone.replace(/\D/g, '');
-    
-    if (digits.length === 11 && digits.startsWith('7')) {
-        return `+7 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7, 9)}-${digits.slice(9)}`;
-    }
-    
-    return phone;
-}
-
-/**
- * Дебаунс функция
- * @param {Function} func - Функция для выполнения
- * @param {number} wait - Время ожидания в миллисекундах
- * @returns {Function} - Дебаунсированная функция
- */
-export function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-/**
- * Троттлинг функция
- * @param {Function} func - Функция для выполнения
- * @param {number} limit - Лимит времени в миллисекундах
- * @returns {Function} - Троттлированная функция
- */
-export function throttle(func, limit) {
-    let inThrottle;
-    return function() {
-        const args = arguments;
-        const context = this;
-        if (!inThrottle) {
-            func.apply(context, args);
-            inThrottle = true;
-            setTimeout(() => inThrottle = false, limit);
+    return {
+        hide: () => {
+            if (modal.parentNode) {
+                modal.parentNode.removeChild(modal);
+            }
         }
     };
+}
+
+export function formatDate(date) {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toLocaleDateString('ru-RU');
+}
+
+export function formatTime(time) {
+    if (!time) return '';
+    const d = new Date(time);
+    return d.toLocaleTimeString('ru-RU', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+export function validatePhone(phone) {
+    return Utils.validatePhone(phone);
+}
+
+export function formatPhone(phone) {
+    return Utils.formatPhone(phone);
+}
+
+export function debounce(func, wait) {
+    return Utils.debounce(func, wait);
+}
+
+export function throttle(func, limit) {
+    return Utils.throttle(func, limit);
 } 
