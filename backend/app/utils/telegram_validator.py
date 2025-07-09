@@ -13,7 +13,7 @@ class TelegramValidator:
     """Централизованный валидатор Telegram данных"""
     
     def __init__(self):
-        self.bot_token = os.getenv('TELEGRAM_BOT_TOKEN', '')
+        self.bot_token = os.getenv('TELEGRAM_BOT_TOKEN', '8187393599:AAEudOluahmhNJixt_hW8mvWjWC0eh1YIlA')
     
     def verify_webapp_data(self, data: Dict[str, Any]) -> bool:
         """
