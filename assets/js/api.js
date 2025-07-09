@@ -143,10 +143,12 @@ export const API = {
     // Методы для регистрации и аутентификации
     async verifyTelegramUser(telegramData) {
         try {
+            console.log('Sending Telegram verification request:', telegramData);
             const response = await this.request('/auth/telegram/verify', {
                 method: 'POST',
                 body: JSON.stringify(telegramData)
             });
+            console.log('Telegram verification response:', response);
             return response;
         } catch (error) {
             console.error('Ошибка верификации Telegram:', error);

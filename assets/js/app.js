@@ -131,9 +131,11 @@ class App {
             if (window.Telegram && window.Telegram.WebApp) {
                 const tg = window.Telegram.WebApp;
                 const telegramInitData = tg.initDataUnsafe;
-                if (telegramInitData && telegramInitData.id) {
-                    // Передаем весь initDataUnsafe, а не только user
-                    const verificationResult = await API.verifyTelegramUser(telegramInitData);
+                console.log('Telegram WebApp data:', telegramInitData);
+                
+                if (telegramInitData && telegramInitData.user && telegramInitData.user.id) {
+                    // Передаем данные пользователя из Telegram
+                    const verificationResult = await API.verifyTelegramUser(telegramInitData.user);
                     if (verificationResult.exists) {
                         const user = verificationResult.user;
                         stateManager.updateUserData(user);

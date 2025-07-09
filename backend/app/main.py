@@ -31,10 +31,14 @@ app.add_middleware(
     allow_origins=[
         "https://web.telegram.org",
         "https://t.me",
+        "https://web.telegram.org",
+        "https://t.me",
         "http://localhost:3000",
         "http://localhost:8000",
         "https://localhost:3000",
-        "https://localhost:8000"
+        "https://localhost:8000",
+        "https://rah.pages.dev",
+        "https://pax-backend-2gng.onrender.com"
     ] + settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
