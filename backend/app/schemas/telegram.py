@@ -75,4 +75,8 @@ class TelegramAuthRequest(BaseModel):
             # Проверяем, что данные не старше 24 часов
             if current_time - v > 86400:
                 raise ValueError('Данные авторизации устарели (старше 24 часов)')
-        return v 
+        return v
+
+class TelegramRefreshRequest(BaseModel):
+    """Схема для обновления токенов"""
+    refresh_token: str = Field(..., description="Refresh токен") 

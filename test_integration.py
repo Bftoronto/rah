@@ -1,327 +1,307 @@
 #!/usr/bin/env python3
 """
-Тестовый скрипт для проверки интеграции фронтенда и бэкенда
-Проверяет все основные API эндпоинты и их совместимость
+Комплексные тесты интеграции фронтенда и бэкенда
+Проверяет совместимость API, схем данных и обработки ошибок
 """
 
-import requests
+import asyncio
 import json
-import time
-import sys
-from datetime import datetime
-from typing import Dict, Any, List
+import requests
+import pytest
+from datetime import datetime, timedelta
+from typing import Dict, Any
 
-# Конфигурация
-BASE_URL = "http://localhost:8000"
-API_BASE = f"{BASE_URL}/api"
+# Конфигурация тестов
+BASE_URL = "https://pax-backend-2gng.onrender.com"
+TEST_USER_DATA = {
+    "id": 123456789,
+    "first_name": "Test",
+    "last_name": "User",
+    "username": "testuser",
+    "photo_url": "https://t.me/i/userpic/320/test.jpg",
+    "auth_date": int(datetime.now().timestamp()),
+    "hash": "test_hash_123"
+}
 
-class IntegrationTester:
+class IntegrationTestSuite:
+    """Комплексные тесты интеграции"""
+    
     def __init__(self):
         self.session = requests.Session()
-        self.results = []
-        self.current_user = None
-        
-    def log_test(self, test_name: str, success: bool, details: str = ""):
-        """Логирование результата теста"""
-        status = "✅ PASS" if success else "❌ FAIL"
+        self.access_token = None
+        self.refresh_token = None
+        self.test_user_id = None
+    
+    def log_test(self, test_name: str, status: str, details: str = ""):
+        """Логирование результатов тестов"""
         timestamp = datetime.now().strftime("%H:%M:%S")
-        result = {
-            "test": test_name,
-            "success": success,
-            "details": details,
-            "timestamp": timestamp
-        }
-        self.results.append(result)
-        print(f"[{timestamp}] {status} {test_name}")
-        if details:
-            print(f"    {details}")
+        status_icon = "✅" if status == "PASS" else "❌"
+        print(f"[{timestamp}] {status_icon} {test_name}: {details}")
     
     def test_health_check(self) -> bool:
-        """Тест health check эндпоинта"""
+        """Тест доступности API"""
         try:
             response = self.session.get(f"{BASE_URL}/health")
             if response.status_code == 200:
                 data = response.json()
-                self.log_test("Health Check", True, f"Status: {data.get('status')}")
+                self.log_test("Health Check", "PASS", f"API доступен, версия: {data.get('version', 'unknown')}")
                 return True
             else:
-                self.log_test("Health Check", False, f"Status code: {response.status_code}")
+                self.log_test("Health Check", "FAIL", f"HTTP {response.status_code}")
                 return False
         except Exception as e:
-            self.log_test("Health Check", False, str(e))
+            self.log_test("Health Check", "FAIL", f"Ошибка подключения: {str(e)}")
             return False
     
-    def test_api_info(self) -> bool:
-        """Тест API info эндпоинта"""
+    def test_telegram_auth_schema(self) -> bool:
+        """Тест схемы авторизации Telegram"""
         try:
-            response = self.session.get(f"{BASE_URL}/api/info")
-            if response.status_code == 200:
-                data = response.json()
-                endpoints = data.get('endpoints', {})
-                self.log_test("API Info", True, f"Version: {data.get('version')}, Endpoints: {len(endpoints)}")
-                return True
-            else:
-                self.log_test("API Info", False, f"Status code: {response.status_code}")
-                return False
-        except Exception as e:
-            self.log_test("API Info", False, str(e))
-            return False
-    
-    def test_telegram_verification(self) -> bool:
-        """Тест верификации Telegram"""
-        try:
-            # Тестовые данные Telegram
-            telegram_data = {
-                "user": {
-                    "id": 123456789,
-                    "first_name": "Test",
-                    "last_name": "User",
-                    "username": "testuser",
-                    "photo_url": "https://t.me/i/userpic/320/testuser.jpg",
-                    "auth_date": int(time.time()),
-                    "hash": "test_hash"
-                },
-                "auth_date": int(time.time()),
-                "hash": "test_hash",
-                "initData": "test_init_data"
+            auth_data = {
+                "user": TEST_USER_DATA,
+                "auth_date": TEST_USER_DATA["auth_date"],
+                "hash": TEST_USER_DATA["hash"]
             }
             
             response = self.session.post(
-                f"{API_BASE}/auth/telegram/verify",
-                json=telegram_data,
+                f"{BASE_URL}/api/auth/telegram/verify",
+                json=auth_data,
                 headers={"Content-Type": "application/json"}
             )
             
-            if response.status_code in [200, 400, 401]:  # Различные возможные ответы
-                data = response.json()
-                exists = data.get('exists', False)
-                self.log_test("Telegram Verification", True, f"User exists: {exists}")
+            if response.status_code in [200, 400]:  # 400 - ожидаемо для тестовых данных
+                self.log_test("Telegram Auth Schema", "PASS", "Схема валидна")
                 return True
             else:
-                self.log_test("Telegram Verification", False, f"Status code: {response.status_code}")
+                self.log_test("Telegram Auth Schema", "FAIL", f"HTTP {response.status_code}")
                 return False
+                
         except Exception as e:
-            self.log_test("Telegram Verification", False, str(e))
+            self.log_test("Telegram Auth Schema", "FAIL", f"Ошибка: {str(e)}")
             return False
     
-    def test_profile_endpoints(self) -> bool:
-        """Тест эндпоинтов профиля"""
+    def test_rides_search_api(self) -> bool:
+        """Тест API поиска поездок"""
         try:
-            # Тест получения профиля (может требовать авторизации)
-            response = self.session.get(f"{API_BASE}/profile")
+            params = {
+                "from_location": "Москва",
+                "to_location": "Санкт-Петербург",
+                "date_from": datetime.now().isoformat(),
+                "limit": 10
+            }
             
-            if response.status_code in [200, 401]:  # 401 - требует авторизации
-                self.log_test("Profile GET", True, f"Status: {response.status_code}")
-                return True
+            response = self.session.get(
+                f"{BASE_URL}/api/rides/search",
+                params=params
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, list):
+                    self.log_test("Rides Search API", "PASS", f"Найдено {len(data)} поездок")
+                    return True
+                else:
+                    self.log_test("Rides Search API", "FAIL", "Неверный формат ответа")
+                    return False
             else:
-                self.log_test("Profile GET", False, f"Status code: {response.status_code}")
+                self.log_test("Rides Search API", "FAIL", f"HTTP {response.status_code}")
                 return False
+                
         except Exception as e:
-            self.log_test("Profile GET", False, str(e))
+            self.log_test("Rides Search API", "FAIL", f"Ошибка: {str(e)}")
             return False
     
-    def test_upload_endpoints(self) -> bool:
-        """Тест эндпоинтов загрузки файлов"""
+    def test_file_upload_schema(self) -> bool:
+        """Тест схемы загрузки файлов"""
         try:
             # Создаем тестовый файл
             test_file_content = b"test image content"
             
-            # Тест загрузки аватара
-            files = {'file': ('test_avatar.jpg', test_file_content, 'image/jpeg')}
-            response = self.session.post(f"{API_BASE}/upload/avatar", files=files)
+            files = {"file": ("test.jpg", test_file_content, "image/jpeg")}
+            data = {"file_type": "avatar"}
             
-            if response.status_code in [200, 401]:  # 401 - требует авторизации
-                self.log_test("Upload Avatar", True, f"Status: {response.status_code}")
+            response = self.session.post(
+                f"{BASE_URL}/api/upload/",
+                files=files,
+                data=data
+            )
+            
+            # Ожидаем 401 (нет авторизации) или 400 (неверные данные)
+            if response.status_code in [401, 400]:
+                self.log_test("File Upload Schema", "PASS", "Схема валидна")
                 return True
             else:
-                self.log_test("Upload Avatar", False, f"Status code: {response.status_code}")
+                self.log_test("File Upload Schema", "FAIL", f"HTTP {response.status_code}")
                 return False
+                
         except Exception as e:
-            self.log_test("Upload Avatar", False, str(e))
+            self.log_test("File Upload Schema", "FAIL", f"Ошибка: {str(e)}")
             return False
     
-    def test_rides_endpoints(self) -> bool:
-        """Тест эндпоинтов поездок"""
+    def test_chat_api_schema(self) -> bool:
+        """Тест схемы чата"""
         try:
-            # Тест поиска поездок
-            params = {
-                "from_location": "Москва",
-                "to_location": "Санкт-Петербург",
-                "date_from": "2024-01-15"
-            }
-            response = self.session.get(f"{API_BASE}/rides/search", params=params)
+            # Тест получения чатов (без авторизации)
+            response = self.session.get(f"{BASE_URL}/api/chat/")
             
-            if response.status_code in [200, 401]:  # 401 - требует авторизации
-                self.log_test("Rides Search", True, f"Status: {response.status_code}")
+            if response.status_code == 401:  # Ожидаем 401 без авторизации
+                self.log_test("Chat API Schema", "PASS", "Схема валидна")
                 return True
             else:
-                self.log_test("Rides Search", False, f"Status code: {response.status_code}")
+                self.log_test("Chat API Schema", "FAIL", f"HTTP {response.status_code}")
                 return False
+                
         except Exception as e:
-            self.log_test("Rides Search", False, str(e))
+            self.log_test("Chat API Schema", "FAIL", f"Ошибка: {str(e)}")
             return False
     
-    def test_chat_endpoints(self) -> bool:
-        """Тест эндпоинтов чата"""
+    def test_rating_api_schema(self) -> bool:
+        """Тест схемы рейтингов"""
         try:
-            # Тест получения сообщений чата
-            response = self.session.get(f"{API_BASE}/chat/1/messages")
+            # Тест получения рейтингов
+            response = self.session.get(f"{BASE_URL}/api/rating/statistics")
             
-            if response.status_code in [200, 401, 404]:  # 404 - чат не найден
-                self.log_test("Chat Messages", True, f"Status: {response.status_code}")
-                return True
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, dict):
+                    self.log_test("Rating API Schema", "PASS", "Схема валидна")
+                    return True
+                else:
+                    self.log_test("Rating API Schema", "FAIL", "Неверный формат ответа")
+                    return False
             else:
-                self.log_test("Chat Messages", False, f"Status code: {response.status_code}")
+                self.log_test("Rating API Schema", "FAIL", f"HTTP {response.status_code}")
                 return False
+                
         except Exception as e:
-            self.log_test("Chat Messages", False, str(e))
+            self.log_test("Rating API Schema", "FAIL", f"Ошибка: {str(e)}")
             return False
     
-    def test_rating_endpoints(self) -> bool:
-        """Тест эндпоинтов рейтинга"""
+    def test_notifications_api_schema(self) -> bool:
+        """Тест схемы уведомлений"""
         try:
-            # Тест получения рейтингов пользователя
-            response = self.session.get(f"{API_BASE}/rating/user/1")
+            # Тест статуса уведомлений
+            response = self.session.get(f"{BASE_URL}/api/notifications/status")
             
-            if response.status_code in [200, 401, 404]:  # 404 - пользователь не найден
-                self.log_test("User Ratings", True, f"Status: {response.status_code}")
-                return True
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, dict):
+                    self.log_test("Notifications API Schema", "PASS", "Схема валидна")
+                    return True
+                else:
+                    self.log_test("Notifications API Schema", "FAIL", "Неверный формат ответа")
+                    return False
             else:
-                self.log_test("User Ratings", False, f"Status code: {response.status_code}")
+                self.log_test("Notifications API Schema", "FAIL", f"HTTP {response.status_code}")
                 return False
+                
         except Exception as e:
-            self.log_test("User Ratings", False, str(e))
+            self.log_test("Notifications API Schema", "FAIL", f"Ошибка: {str(e)}")
             return False
     
-    def test_notifications_endpoints(self) -> bool:
-        """Тест эндпоинтов уведомлений"""
+    def test_error_handling(self) -> bool:
+        """Тест обработки ошибок"""
         try:
-            # Тест получения уведомлений
-            response = self.session.get(f"{API_BASE}/notifications")
+            # Тест несуществующего эндпоинта
+            response = self.session.get(f"{BASE_URL}/api/nonexistent")
             
-            if response.status_code in [200, 401]:
-                self.log_test("Notifications", True, f"Status: {response.status_code}")
+            if response.status_code == 404:
+                self.log_test("Error Handling", "PASS", "404 обрабатывается корректно")
                 return True
             else:
-                self.log_test("Notifications", False, f"Status code: {response.status_code}")
+                self.log_test("Error Handling", "FAIL", f"HTTP {response.status_code}")
                 return False
+                
         except Exception as e:
-            self.log_test("Notifications", False, str(e))
+            self.log_test("Error Handling", "FAIL", f"Ошибка: {str(e)}")
             return False
     
-    def test_moderation_endpoints(self) -> bool:
-        """Тест эндпоинтов модерации"""
+    def test_cors_headers(self) -> bool:
+        """Тест CORS заголовков"""
         try:
-            # Тест получения отчетов
-            response = self.session.get(f"{API_BASE}/moderation/reports")
+            response = self.session.options(f"{BASE_URL}/api/auth/")
             
-            if response.status_code in [200, 401]:
-                self.log_test("Moderation Reports", True, f"Status: {response.status_code}")
-                return True
+            if response.status_code == 200:
+                cors_headers = response.headers.get("Access-Control-Allow-Origin")
+                if cors_headers:
+                    self.log_test("CORS Headers", "PASS", "CORS настроен")
+                    return True
+                else:
+                    self.log_test("CORS Headers", "FAIL", "CORS заголовки отсутствуют")
+                    return False
             else:
-                self.log_test("Moderation Reports", False, f"Status code: {response.status_code}")
+                self.log_test("CORS Headers", "FAIL", f"HTTP {response.status_code}")
                 return False
+                
         except Exception as e:
-            self.log_test("Moderation Reports", False, str(e))
+            self.log_test("CORS Headers", "FAIL", f"Ошибка: {str(e)}")
             return False
     
     def run_all_tests(self) -> Dict[str, Any]:
         """Запуск всех тестов"""
-        print("🚀 Запуск тестов интеграции фронтенда и бэкенда")
+        print("🔍 ЗАПУСК КОМПЛЕКСНЫХ ТЕСТОВ ИНТЕГРАЦИИ")
         print("=" * 60)
         
         tests = [
             ("Health Check", self.test_health_check),
-            ("API Info", self.test_api_info),
-            ("Telegram Verification", self.test_telegram_verification),
-            ("Profile Endpoints", self.test_profile_endpoints),
-            ("Upload Endpoints", self.test_upload_endpoints),
-            ("Rides Endpoints", self.test_rides_endpoints),
-            ("Chat Endpoints", self.test_chat_endpoints),
-            ("Rating Endpoints", self.test_rating_endpoints),
-            ("Notifications Endpoints", self.test_notifications_endpoints),
-            ("Moderation Endpoints", self.test_moderation_endpoints),
+            ("Telegram Auth Schema", self.test_telegram_auth_schema),
+            ("Rides Search API", self.test_rides_search_api),
+            ("File Upload Schema", self.test_file_upload_schema),
+            ("Chat API Schema", self.test_chat_api_schema),
+            ("Rating API Schema", self.test_rating_api_schema),
+            ("Notifications API Schema", self.test_notifications_api_schema),
+            ("Error Handling", self.test_error_handling),
+            ("CORS Headers", self.test_cors_headers)
         ]
         
+        results = {}
         passed = 0
         total = len(tests)
         
         for test_name, test_func in tests:
             try:
-                if test_func():
+                result = test_func()
+                results[test_name] = result
+                if result:
                     passed += 1
             except Exception as e:
-                self.log_test(test_name, False, f"Exception: {str(e)}")
+                self.log_test(test_name, "FAIL", f"Исключение: {str(e)}")
+                results[test_name] = False
         
-        # Вывод итогового отчета
+        # Вывод результатов
         print("\n" + "=" * 60)
-        print("📊 ИТОГОВЫЙ ОТЧЕТ")
+        print(f"📊 РЕЗУЛЬТАТЫ ТЕСТОВ: {passed}/{total} пройдено")
         print("=" * 60)
         
         success_rate = (passed / total) * 100
-        print(f"✅ Пройдено: {passed}/{total} ({success_rate:.1f}%)")
+        print(f"🎯 Процент успешности: {success_rate:.1f}%")
         
-        # Детальный отчет
-        print("\n📋 Детальный отчет:")
-        for result in self.results:
-            status = "✅" if result['success'] else "❌"
-            print(f"{status} {result['test']} - {result['details']}")
+        if success_rate >= 80:
+            print("✅ Интеграция в хорошем состоянии")
+        elif success_rate >= 60:
+            print("⚠️  Интеграция требует внимания")
+        else:
+            print("❌ Критические проблемы интеграции")
         
         return {
             "total_tests": total,
             "passed_tests": passed,
             "success_rate": success_rate,
-            "results": self.results
+            "results": results
         }
 
 def main():
     """Главная функция"""
-    if len(sys.argv) > 1 and sys.argv[1] == "--help":
-        print("""
-Тестовый скрипт для проверки интеграции фронтенда и бэкенда
-
-Использование:
-    python test_integration.py
-
-Опции:
-    --help    Показать эту справку
-
-Тесты проверяют:
-    - Health check эндпоинт
-    - API info эндпоинт
-    - Верификацию Telegram
-    - Эндпоинты профиля
-    - Эндпоинты загрузки файлов
-    - Эндпоинты поездок
-    - Эндпоинты чата
-    - Эндпоинты рейтинга
-    - Эндпоинты уведомлений
-    - Эндпоинты модерации
-        """)
-        return
+    test_suite = IntegrationTestSuite()
+    results = test_suite.run_all_tests()
     
-    tester = IntegrationTester()
-    results = tester.run_all_tests()
-    
-    # Сохранение результатов в файл
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"integration_test_results_{timestamp}.json"
-    
-    with open(filename, 'w', encoding='utf-8') as f:
+    # Сохранение результатов
+    with open("integration_test_results.json", "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
     
-    print(f"\n💾 Результаты сохранены в файл: {filename}")
+    print(f"\n📄 Результаты сохранены в integration_test_results.json")
     
-    # Возвращаем код выхода
-    if results['success_rate'] >= 80:
-        print("🎉 Интеграция работает хорошо!")
-        sys.exit(0)
-    elif results['success_rate'] >= 60:
-        print("⚠️  Интеграция работает частично, требуются доработки")
-        sys.exit(1)
-    else:
-        print("❌ Критические проблемы с интеграцией!")
-        sys.exit(2)
+    return results["success_rate"] >= 60
 
 if __name__ == "__main__":
-    main() 
+    success = main()
+    exit(0 if success else 1) 

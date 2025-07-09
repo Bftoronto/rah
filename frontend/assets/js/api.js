@@ -61,12 +61,13 @@ async function refreshAuthTokens() {
 
         if (response.ok) {
             const data = await response.json();
-            setAuthTokens(data.tokens);
-            return true;
-        } else {
-            clearAuthTokens();
-            return false;
+            if (data.tokens) {
+                setAuthTokens(data.tokens);
+                return true;
+            }
         }
+        clearAuthTokens();
+        return false;
     } catch (error) {
         console.error('Error refreshing tokens:', error);
         clearAuthTokens();
@@ -199,36 +200,51 @@ export const API = {
                         config.headers['Authorization'] = `Bearer ${newToken}`;
                         const retryResponse = await fetch(url, config);
                         
-                        if (!retryResponse.ok) {
-                            const errorData = await retryResponse.json().catch(() => ({}));
-                            throw new ApiError(retryResponse.status, `HTTP error! status: ${retryResponse.status}`, errorData);
+                        if (retryResponse.ok) {
+                            return await retryResponse.json();
                         }
-                        
-                        return await retryResponse.json();
                     }
-                } else {
-                    // Не удалось обновить токен, очищаем и перенаправляем на логин
-                    clearAuthTokens();
-                    window.location.href = '/registration.html';
-                    throw new ApiError(401, 'Authentication failed');
                 }
+                
+                // Если не удалось обновить токен, очищаем авторизацию
+                clearAuthTokens();
+                throw new ApiError(401, 'Требуется авторизация');
             }
             
+            // Обработка других ошибок
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new ApiError(response.status, `HTTP error! status: ${response.status}`, errorData);
+                let errorData = null;
+                try {
+                    errorData = await response.json();
+                } catch {
+                    errorData = { detail: 'Неизвестная ошибка' };
+                }
+                
+                throw new ApiError(response.status, errorData.detail || 'Ошибка запроса', errorData);
             }
             
-            return await response.json();
+            // Успешный ответ
+            const data = await response.json();
+            
+            // Кэшируем успешные GET запросы
+            if (options.method === 'GET' || !options.method) {
+                const cacheKey = `${options.method || 'GET'}_${endpoint}`;
+                cacheManager.set(cacheKey, data);
+            }
+            
+            return data;
+            
         } catch (error) {
-            console.error('API request failed:', error);
-            
-            // Логируем ошибку для мониторинга
             if (error instanceof ApiError) {
-                this.logError(error);
+                throw error;
             }
             
-            throw error;
+            // Сетевые ошибки
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                throw new ApiError(0, 'Нет соединения с сервером');
+            }
+            
+            throw new ApiError(500, 'Неизвестная ошибка', error);
         }
     },
 
@@ -263,13 +279,25 @@ export const API = {
     
     // Поиск поездок (ИСПРАВЛЕНО)
     async getRides(from, to, date) {
-        const params = new URLSearchParams({
-            from_location: from,
-            to_location: to,
-            date_from: date instanceof Date ? date.toISOString() : date
-        });
-        
-        return this.request(`/api/rides/search?${params.toString()}`, { method: 'GET' });
+        try {
+            const params = new URLSearchParams();
+            if (from) params.append('from_location', from);
+            if (to) params.append('to_location', to);
+            if (date) {
+                const dateFrom = new Date(date);
+                const dateTo = new Date(date);
+                dateTo.setDate(dateTo.getDate() + 1);
+                params.append('date_from', dateFrom.toISOString());
+                params.append('date_to', dateTo.toISOString());
+            }
+            
+            return await this.request(`/api/rides/search?${params.toString()}`, {
+                method: 'GET'
+            });
+        } catch (error) {
+            this.logError(error, 'getRides');
+            throw error;
+        }
     },
     
     // Бронирование поездки (ИСПРАВЛЕНО)
@@ -392,22 +420,32 @@ export const API = {
     
     // Универсальная загрузка файлов
     async uploadFile(file, fileType) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('file_type', fileType);
-        
-        const data = await this.request('/api/upload/', { 
-            method: 'POST', 
-            body: formData,
-            headers: {}
-        });
-        
-        // Инвалидируем соответствующие кэши
-        if (fileType === 'avatar') {
-            cacheManager.invalidate('user_data');
+        try {
+            // Валидация файла
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+            
+            if (file.size > maxSize) {
+                throw new Error('Размер файла превышает 5MB');
+            }
+            
+            if (!allowedTypes.includes(file.type)) {
+                throw new Error('Неподдерживаемый тип файла. Разрешены: JPEG, PNG, WebP');
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('file_type', fileType);
+            
+            return await this.request('/api/upload/', {
+                method: 'POST',
+                body: formData,
+                headers: {} // Не устанавливаем Content-Type для FormData
+            });
+        } catch (error) {
+            this.logError(error, 'uploadFile');
+            throw error;
         }
-        
-        return data;
     },
     
     // Подписка на уведомления
@@ -476,23 +514,36 @@ export const API = {
     // JWT авторизация
     async login(telegramData) {
         try {
+            // Структурируем данные для бэкенда
+            const authRequest = {
+                user: {
+                    id: telegramData.id,
+                    first_name: telegramData.first_name,
+                    last_name: telegramData.last_name,
+                    username: telegramData.username,
+                    photo_url: telegramData.photo_url,
+                    auth_date: telegramData.auth_date,
+                    hash: telegramData.hash
+                },
+                auth_date: telegramData.auth_date,
+                hash: telegramData.hash,
+                initData: telegramData.initData,
+                query_id: telegramData.query_id,
+                start_param: telegramData.start_param
+            };
+
             const response = await this.request('/api/auth/login', {
                 method: 'POST',
-                body: JSON.stringify(telegramData)
+                body: authRequest
             });
-            
-            if (response.success && response.tokens) {
+
+            if (response.tokens) {
                 setAuthTokens(response.tokens);
-                currentUser = response.user;
-                localStorage.setItem('currentUser', JSON.stringify(response.user));
-                
-                // Очищаем кэш при смене пользователя
-                cacheManager.clear();
             }
-            
+
             return response;
         } catch (error) {
-            console.error('Login error:', error);
+            this.logError(error, 'login');
             throw error;
         }
     },

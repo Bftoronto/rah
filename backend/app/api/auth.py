@@ -9,7 +9,7 @@ from ..database import get_db
 from ..services.auth_service import AuthService
 from ..schemas.user import UserCreate, UserUpdate, UserRead, PrivacyPolicyAccept
 from ..models.user import User
-from ..schemas.telegram import TelegramWebAppData, TelegramVerificationRequest, TelegramAuthRequest
+from ..schemas.telegram import TelegramWebAppData, TelegramVerificationRequest, TelegramAuthRequest, TelegramRefreshRequest
 from ..utils.security import verify_telegram_data, extract_telegram_user_data
 from ..utils.jwt_auth import get_current_user_optional, require_auth, require_driver, require_verified_user
 
@@ -312,25 +312,30 @@ async def login_user(telegram_data: TelegramAuthRequest, db: Session = Depends(g
         )
 
 @router.post('/refresh')
-async def refresh_tokens(refresh_token: str, db: Session = Depends(get_db)):
-    """Обновление JWT токенов по refresh токену"""
+async def refresh_tokens(
+    refresh_data: TelegramRefreshRequest, 
+    db: Session = Depends(get_db)
+):
+    """Обновление JWT токенов"""
     try:
         auth_service = AuthService(db)
+        tokens = auth_service.refresh_tokens(refresh_data.refresh_token)
         
-        # Обновляем токены
-        auth_result = auth_service.refresh_tokens(refresh_token)
-        
-        logger.info("Токены успешно обновлены")
+        logger.info(f"Токены успешно обновлены")
         return {
             "success": True,
-            "message": "Токены обновлены",
-            **auth_result
+            "tokens": tokens,
+            "message": "Токены успешно обновлены"
         }
         
-    except HTTPException:
-        raise
+    except ValueError as e:
+        logger.warning(f"Ошибка обновления токенов: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Недействительный refresh токен"
+        )
     except Exception as e:
-        logger.error(f"Ошибка обновления токенов: {str(e)}")
+        logger.error(f"Критическая ошибка обновления токенов: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка обновления токенов"
