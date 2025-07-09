@@ -1,6 +1,7 @@
 from pydantic import BaseModel, validator
 from typing import Dict, List, Optional, Any
 from datetime import datetime
+import re
 
 class NotificationCreate(BaseModel):
     user_id: int
@@ -55,15 +56,20 @@ class NotificationSettings(BaseModel):
     marketing_notifications: bool = False
     quiet_hours_start: Optional[str] = None  # "22:00"
     quiet_hours_end: Optional[str] = None    # "08:00"
+    email_notifications: bool = False
+    push_notifications: bool = True
     
     @validator('quiet_hours_start', 'quiet_hours_end')
     def validate_time_format(cls, v):
         if v is not None:
             try:
+                # Проверяем формат времени HH:MM
+                if not re.match(r'^([01]?[0-9]|2[0-3]):[0-5][0-9]$', v):
+                    raise ValueError('Неверный формат времени. Используйте HH:MM')
                 hour, minute = map(int, v.split(':'))
                 if not (0 <= hour <= 23 and 0 <= minute <= 59):
-                    raise ValueError
-            except ValueError:
+                    raise ValueError('Неверное время')
+            except Exception:
                 raise ValueError("Время должно быть в формате HH:MM")
         return v
 

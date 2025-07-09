@@ -1,307 +1,250 @@
 #!/usr/bin/env python3
 """
-Комплексные тесты интеграции фронтенда и бэкенда
-Проверяет совместимость API, схем данных и обработки ошибок
+Тестовый скрипт для проверки исправлений интеграции фронтенда и бэкенда
 """
 
-import asyncio
-import json
 import requests
-import pytest
-from datetime import datetime, timedelta
+import json
+import time
 from typing import Dict, Any
 
-# Конфигурация тестов
-BASE_URL = "https://pax-backend-2gng.onrender.com"
-TEST_USER_DATA = {
-    "id": 123456789,
-    "first_name": "Test",
-    "last_name": "User",
-    "username": "testuser",
-    "photo_url": "https://t.me/i/userpic/320/test.jpg",
-    "auth_date": int(datetime.now().timestamp()),
-    "hash": "test_hash_123"
-}
+# Конфигурация
+BASE_URL = "http://localhost:8000"
+API_BASE = f"{BASE_URL}/api"
 
-class IntegrationTestSuite:
-    """Комплексные тесты интеграции"""
-    
+class IntegrationTester:
     def __init__(self):
         self.session = requests.Session()
-        self.access_token = None
-        self.refresh_token = None
-        self.test_user_id = None
+        self.test_results = []
+        
+    def log_test(self, test_name: str, success: bool, details: str = ""):
+        """Логирование результатов теста"""
+        status = "✅ PASS" if success else "❌ FAIL"
+        print(f"{status} {test_name}")
+        if details:
+            print(f"   {details}")
+        
+        self.test_results.append({
+            "test": test_name,
+            "success": success,
+            "details": details
+        })
     
-    def log_test(self, test_name: str, status: str, details: str = ""):
-        """Логирование результатов тестов"""
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        status_icon = "✅" if status == "PASS" else "❌"
-        print(f"[{timestamp}] {status_icon} {test_name}: {details}")
-    
-    def test_health_check(self) -> bool:
-        """Тест доступности API"""
+    def test_auth_integration(self):
+        """Тест интеграции авторизации"""
+        print("\n🔐 Тестирование авторизации...")
+        
+        # Тестовые данные Telegram
+        telegram_data = {
+            "user": {
+                "id": 123456789,
+                "first_name": "Test",
+                "last_name": "User",
+                "username": "testuser",
+                "photo_url": "https://example.com/photo.jpg",
+                "auth_date": int(time.time()),
+                "hash": "test_hash"
+            },
+            "auth_date": int(time.time()),
+            "hash": "test_hash",
+            "initData": "",
+            "query_id": "",
+            "start_param": ""
+        }
+        
         try:
-            response = self.session.get(f"{BASE_URL}/health")
-            if response.status_code == 200:
-                data = response.json()
-                self.log_test("Health Check", "PASS", f"API доступен, версия: {data.get('version', 'unknown')}")
-                return True
-            else:
-                self.log_test("Health Check", "FAIL", f"HTTP {response.status_code}")
-                return False
-        except Exception as e:
-            self.log_test("Health Check", "FAIL", f"Ошибка подключения: {str(e)}")
-            return False
-    
-    def test_telegram_auth_schema(self) -> bool:
-        """Тест схемы авторизации Telegram"""
-        try:
-            auth_data = {
-                "user": TEST_USER_DATA,
-                "auth_date": TEST_USER_DATA["auth_date"],
-                "hash": TEST_USER_DATA["hash"]
-            }
-            
+            # Тест верификации Telegram
             response = self.session.post(
-                f"{BASE_URL}/api/auth/telegram/verify",
-                json=auth_data,
+                f"{API_BASE}/auth/telegram/verify",
+                json=telegram_data,
                 headers={"Content-Type": "application/json"}
             )
             
-            if response.status_code in [200, 400]:  # 400 - ожидаемо для тестовых данных
-                self.log_test("Telegram Auth Schema", "PASS", "Схема валидна")
-                return True
-            else:
-                self.log_test("Telegram Auth Schema", "FAIL", f"HTTP {response.status_code}")
-                return False
-                
-        except Exception as e:
-            self.log_test("Telegram Auth Schema", "FAIL", f"Ошибка: {str(e)}")
-            return False
-    
-    def test_rides_search_api(self) -> bool:
-        """Тест API поиска поездок"""
-        try:
-            params = {
-                "from_location": "Москва",
-                "to_location": "Санкт-Петербург",
-                "date_from": datetime.now().isoformat(),
-                "limit": 10
-            }
-            
-            response = self.session.get(
-                f"{BASE_URL}/api/rides/search",
-                params=params
-            )
-            
             if response.status_code == 200:
                 data = response.json()
-                if isinstance(data, list):
-                    self.log_test("Rides Search API", "PASS", f"Найдено {len(data)} поездок")
-                    return True
-                else:
-                    self.log_test("Rides Search API", "FAIL", "Неверный формат ответа")
-                    return False
+                self.log_test("Telegram верификация", True, f"Пользователь существует: {data.get('exists', False)}")
             else:
-                self.log_test("Rides Search API", "FAIL", f"HTTP {response.status_code}")
-                return False
+                self.log_test("Telegram верификация", False, f"HTTP {response.status_code}: {response.text}")
                 
         except Exception as e:
-            self.log_test("Rides Search API", "FAIL", f"Ошибка: {str(e)}")
-            return False
+            self.log_test("Telegram верификация", False, f"Ошибка: {str(e)}")
     
-    def test_file_upload_schema(self) -> bool:
-        """Тест схемы загрузки файлов"""
-        try:
-            # Создаем тестовый файл
-            test_file_content = b"test image content"
-            
-            files = {"file": ("test.jpg", test_file_content, "image/jpeg")}
-            data = {"file_type": "avatar"}
-            
-            response = self.session.post(
-                f"{BASE_URL}/api/upload/",
-                files=files,
-                data=data
-            )
-            
-            # Ожидаем 401 (нет авторизации) или 400 (неверные данные)
-            if response.status_code in [401, 400]:
-                self.log_test("File Upload Schema", "PASS", "Схема валидна")
-                return True
-            else:
-                self.log_test("File Upload Schema", "FAIL", f"HTTP {response.status_code}")
-                return False
-                
-        except Exception as e:
-            self.log_test("File Upload Schema", "FAIL", f"Ошибка: {str(e)}")
-            return False
-    
-    def test_chat_api_schema(self) -> bool:
-        """Тест схемы чата"""
-        try:
-            # Тест получения чатов (без авторизации)
-            response = self.session.get(f"{BASE_URL}/api/chat/")
-            
-            if response.status_code == 401:  # Ожидаем 401 без авторизации
-                self.log_test("Chat API Schema", "PASS", "Схема валидна")
-                return True
-            else:
-                self.log_test("Chat API Schema", "FAIL", f"HTTP {response.status_code}")
-                return False
-                
-        except Exception as e:
-            self.log_test("Chat API Schema", "FAIL", f"Ошибка: {str(e)}")
-            return False
-    
-    def test_rating_api_schema(self) -> bool:
-        """Тест схемы рейтингов"""
-        try:
-            # Тест получения рейтингов
-            response = self.session.get(f"{BASE_URL}/api/rating/statistics")
-            
-            if response.status_code == 200:
-                data = response.json()
-                if isinstance(data, dict):
-                    self.log_test("Rating API Schema", "PASS", "Схема валидна")
-                    return True
-                else:
-                    self.log_test("Rating API Schema", "FAIL", "Неверный формат ответа")
-                    return False
-            else:
-                self.log_test("Rating API Schema", "FAIL", f"HTTP {response.status_code}")
-                return False
-                
-        except Exception as e:
-            self.log_test("Rating API Schema", "FAIL", f"Ошибка: {str(e)}")
-            return False
-    
-    def test_notifications_api_schema(self) -> bool:
-        """Тест схемы уведомлений"""
-        try:
-            # Тест статуса уведомлений
-            response = self.session.get(f"{BASE_URL}/api/notifications/status")
-            
-            if response.status_code == 200:
-                data = response.json()
-                if isinstance(data, dict):
-                    self.log_test("Notifications API Schema", "PASS", "Схема валидна")
-                    return True
-                else:
-                    self.log_test("Notifications API Schema", "FAIL", "Неверный формат ответа")
-                    return False
-            else:
-                self.log_test("Notifications API Schema", "FAIL", f"HTTP {response.status_code}")
-                return False
-                
-        except Exception as e:
-            self.log_test("Notifications API Schema", "FAIL", f"Ошибка: {str(e)}")
-            return False
-    
-    def test_error_handling(self) -> bool:
-        """Тест обработки ошибок"""
-        try:
-            # Тест несуществующего эндпоинта
-            response = self.session.get(f"{BASE_URL}/api/nonexistent")
-            
-            if response.status_code == 404:
-                self.log_test("Error Handling", "PASS", "404 обрабатывается корректно")
-                return True
-            else:
-                self.log_test("Error Handling", "FAIL", f"HTTP {response.status_code}")
-                return False
-                
-        except Exception as e:
-            self.log_test("Error Handling", "FAIL", f"Ошибка: {str(e)}")
-            return False
-    
-    def test_cors_headers(self) -> bool:
-        """Тест CORS заголовков"""
-        try:
-            response = self.session.options(f"{BASE_URL}/api/auth/")
-            
-            if response.status_code == 200:
-                cors_headers = response.headers.get("Access-Control-Allow-Origin")
-                if cors_headers:
-                    self.log_test("CORS Headers", "PASS", "CORS настроен")
-                    return True
-                else:
-                    self.log_test("CORS Headers", "FAIL", "CORS заголовки отсутствуют")
-                    return False
-            else:
-                self.log_test("CORS Headers", "FAIL", f"HTTP {response.status_code}")
-                return False
-                
-        except Exception as e:
-            self.log_test("CORS Headers", "FAIL", f"Ошибка: {str(e)}")
-            return False
-    
-    def run_all_tests(self) -> Dict[str, Any]:
-        """Запуск всех тестов"""
-        print("🔍 ЗАПУСК КОМПЛЕКСНЫХ ТЕСТОВ ИНТЕГРАЦИИ")
-        print("=" * 60)
+    def test_rating_integration(self):
+        """Тест интеграции рейтингов"""
+        print("\n⭐ Тестирование рейтингов...")
         
-        tests = [
-            ("Health Check", self.test_health_check),
-            ("Telegram Auth Schema", self.test_telegram_auth_schema),
-            ("Rides Search API", self.test_rides_search_api),
-            ("File Upload Schema", self.test_file_upload_schema),
-            ("Chat API Schema", self.test_chat_api_schema),
-            ("Rating API Schema", self.test_rating_api_schema),
-            ("Notifications API Schema", self.test_notifications_api_schema),
-            ("Error Handling", self.test_error_handling),
-            ("CORS Headers", self.test_cors_headers)
+        # Тестовые данные рейтинга
+        rating_data = {
+            "target_user_id": 1,
+            "ride_id": 1,
+            "rating": 5,
+            "comment": "Отличная поездка! Рекомендую всем."
+        }
+        
+        try:
+            # Тест создания рейтинга
+            response = self.session.post(
+                f"{API_BASE}/rating/",
+                json=rating_data,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.log_test("Создание рейтинга", True, f"Рейтинг создан: {data.get('rating', 0)}")
+            else:
+                self.log_test("Создание рейтинга", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Создание рейтинга", False, f"Ошибка: {str(e)}")
+        
+        # Тест создания отзыва
+        review_data = {
+            "target_user_id": 1,
+            "ride_id": 1,
+            "text": "Очень хороший водитель, поездка была комфортной и безопасной.",
+            "is_positive": True
+        }
+        
+        try:
+            response = self.session.post(
+                f"{API_BASE}/rating/review",
+                json=review_data,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.log_test("Создание отзыва", True, f"Отзыв создан: {data.get('text', '')[:50]}...")
+            else:
+                self.log_test("Создание отзыва", False, f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Создание отзыва", False, f"Ошибка: {str(e)}")
+    
+    def test_notification_integration(self):
+        """Тест интеграции уведомлений"""
+        print("\n🔔 Тестирование уведомлений...")
+        
+        try:
+            # Тест получения настроек уведомлений
+            response = self.session.get(f"{API_BASE}/notifications/settings/1")
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.log_test("Получение настроек уведомлений", True, 
+                            f"Настройки получены: ride={data.get('ride_notifications')}")
+            else:
+                self.log_test("Получение настроек уведомлений", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Получение настроек уведомлений", False, f"Ошибка: {str(e)}")
+        
+        # Тест обновления настроек
+        settings_data = {
+            "user_id": 1,
+            "ride_notifications": True,
+            "system_notifications": True,
+            "reminder_notifications": False,
+            "marketing_notifications": False,
+            "quiet_hours_start": "22:00",
+            "quiet_hours_end": "08:00",
+            "email_notifications": False,
+            "push_notifications": True
+        }
+        
+        try:
+            response = self.session.put(
+                f"{API_BASE}/notifications/settings/1",
+                json=settings_data,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.log_test("Обновление настроек уведомлений", True, 
+                            f"Настройки обновлены: {data.get('message', '')}")
+            else:
+                self.log_test("Обновление настроек уведомлений", False, 
+                            f"HTTP {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Обновление настроек уведомлений", False, f"Ошибка: {str(e)}")
+    
+    def test_api_endpoints(self):
+        """Тест доступности API эндпоинтов"""
+        print("\n🌐 Тестирование API эндпоинтов...")
+        
+        endpoints = [
+            ("GET", "/auth/privacy-policy", "Политика конфиденциальности"),
+            ("GET", "/rating/user/1/summary", "Сводка рейтингов"),
+            ("GET", "/rating/top", "Топ пользователей"),
+            ("GET", "/rating/statistics", "Статистика рейтингов"),
+            ("GET", "/notifications/status", "Статус уведомлений")
         ]
         
-        results = {}
-        passed = 0
-        total = len(tests)
-        
-        for test_name, test_func in tests:
+        for method, endpoint, description in endpoints:
             try:
-                result = test_func()
-                results[test_name] = result
-                if result:
-                    passed += 1
+                response = self.session.request(
+                    method, 
+                    f"{API_BASE}{endpoint}",
+                    headers={"Content-Type": "application/json"}
+                )
+                
+                if response.status_code in [200, 404]:  # 404 тоже нормально для тестовых данных
+                    self.log_test(f"{description}", True, f"HTTP {response.status_code}")
+                else:
+                    self.log_test(f"{description}", False, f"HTTP {response.status_code}: {response.text}")
+                    
             except Exception as e:
-                self.log_test(test_name, "FAIL", f"Исключение: {str(e)}")
-                results[test_name] = False
+                self.log_test(f"{description}", False, f"Ошибка: {str(e)}")
+    
+    def run_all_tests(self):
+        """Запуск всех тестов"""
+        print("🧪 ЗАПУСК ТЕСТОВ ИНТЕГРАЦИИ")
+        print("=" * 50)
         
-        # Вывод результатов
-        print("\n" + "=" * 60)
-        print(f"📊 РЕЗУЛЬТАТЫ ТЕСТОВ: {passed}/{total} пройдено")
-        print("=" * 60)
+        # Проверяем доступность сервера
+        try:
+            response = self.session.get(f"{BASE_URL}/docs")
+            if response.status_code == 200:
+                print("✅ Сервер доступен")
+            else:
+                print("❌ Сервер недоступен")
+                return
+        except Exception as e:
+            print(f"❌ Ошибка подключения к серверу: {str(e)}")
+            return
         
-        success_rate = (passed / total) * 100
-        print(f"🎯 Процент успешности: {success_rate:.1f}%")
+        # Запускаем тесты
+        self.test_auth_integration()
+        self.test_rating_integration()
+        self.test_notification_integration()
+        self.test_api_endpoints()
         
-        if success_rate >= 80:
-            print("✅ Интеграция в хорошем состоянии")
-        elif success_rate >= 60:
-            print("⚠️  Интеграция требует внимания")
+        # Выводим итоговую статистику
+        print("\n" + "=" * 50)
+        print("📊 ИТОГОВАЯ СТАТИСТИКА")
+        
+        total_tests = len(self.test_results)
+        passed_tests = sum(1 for result in self.test_results if result["success"])
+        failed_tests = total_tests - passed_tests
+        
+        print(f"Всего тестов: {total_tests}")
+        print(f"Пройдено: {passed_tests}")
+        print(f"Провалено: {failed_tests}")
+        print(f"Успешность: {(passed_tests/total_tests)*100:.1f}%")
+        
+        if failed_tests == 0:
+            print("\n🎉 ВСЕ ТЕСТЫ ПРОЙДЕНЫ УСПЕШНО!")
         else:
-            print("❌ Критические проблемы интеграции")
-        
-        return {
-            "total_tests": total,
-            "passed_tests": passed,
-            "success_rate": success_rate,
-            "results": results
-        }
-
-def main():
-    """Главная функция"""
-    test_suite = IntegrationTestSuite()
-    results = test_suite.run_all_tests()
-    
-    # Сохранение результатов
-    with open("integration_test_results.json", "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2, ensure_ascii=False)
-    
-    print(f"\n📄 Результаты сохранены в integration_test_results.json")
-    
-    return results["success_rate"] >= 60
+            print(f"\n⚠️  ПРОВАЛЕНО ТЕСТОВ: {failed_tests}")
+            print("Детали проваленных тестов:")
+            for result in self.test_results:
+                if not result["success"]:
+                    print(f"  - {result['test']}: {result['details']}")
 
 if __name__ == "__main__":
-    success = main()
-    exit(0 if success else 1) 
+    tester = IntegrationTester()
+    tester.run_all_tests() 

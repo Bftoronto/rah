@@ -455,15 +455,42 @@ export const API = {
     
     // Получение настроек уведомлений
     async getNotificationSettings(userId) {
-        return this.request(`/api/notifications/settings/${userId}`, { method: 'GET' });
+        try {
+            const response = await this.request(`/api/notifications/settings/${userId}`, { 
+                method: 'GET' 
+            });
+            return response;
+        } catch (error) {
+            console.error('Ошибка получения настроек уведомлений:', error);
+            throw error;
+        }
     },
     
     // Обновление настроек уведомлений
     async updateNotificationSettings(userId, settings) {
-        return this.request(`/api/notifications/settings/${userId}`, { 
-            method: 'PUT', 
-            body: JSON.stringify(settings) 
-        });
+        try {
+            // Унифицированная структура данных для бэкенда
+            const requestData = {
+                user_id: userId,
+                ride_notifications: settings.ride_notifications,
+                system_notifications: settings.system_notifications,
+                reminder_notifications: settings.reminder_notifications,
+                marketing_notifications: settings.marketing_notifications,
+                quiet_hours_start: settings.quiet_hours_start,
+                quiet_hours_end: settings.quiet_hours_end,
+                email_notifications: settings.email_notifications,
+                push_notifications: settings.push_notifications
+            };
+
+            const response = await this.request(`/api/notifications/settings/${userId}`, { 
+                method: 'PUT', 
+                body: JSON.stringify(requestData) 
+            });
+            return response;
+        } catch (error) {
+            console.error('Ошибка обновления настроек уведомлений:', error);
+            throw error;
+        }
     },
     
     // Отправка уведомления (заглушка)
@@ -514,7 +541,7 @@ export const API = {
     // JWT авторизация
     async login(telegramData) {
         try {
-            // Структурируем данные для бэкенда
+            // Унифицированная структура данных для бэкенда
             const authRequest = {
                 user: {
                     id: telegramData.id,
@@ -534,7 +561,7 @@ export const API = {
 
             const response = await this.request('/api/auth/login', {
                 method: 'POST',
-                body: authRequest
+                body: JSON.stringify(authRequest)
             });
 
             if (response.tokens) {
@@ -583,9 +610,17 @@ export const API = {
                 throw new Error('Отсутствуют обязательные данные пользователя');
             }
             
-            // Подготавливаем данные для отправки
+            // Унифицированная структура данных для бэкенда
             const requestData = {
-                user: telegramData.user,
+                user: {
+                    id: telegramData.user.id,
+                    first_name: telegramData.user.first_name,
+                    last_name: telegramData.user.last_name,
+                    username: telegramData.user.username,
+                    photo_url: telegramData.user.photo_url,
+                    auth_date: telegramData.auth_date || Math.floor(Date.now() / 1000),
+                    hash: telegramData.user.hash || telegramData.hash || 'test_hash'
+                },
                 auth_date: telegramData.auth_date || Math.floor(Date.now() / 1000),
                 hash: telegramData.hash || 'test_hash',
                 initData: telegramData.initData || '',
@@ -704,10 +739,21 @@ export const API = {
     // Методы для работы с рейтингами и отзывами
     async createRating(ratingData) {
         try {
+            // Унифицированная структура данных для бэкенда
+            const requestData = {
+                target_user_id: ratingData.target_user_id,
+                ride_id: ratingData.ride_id,
+                rating: ratingData.rating,
+                comment: ratingData.comment || null
+            };
+
             const response = await this.request('/api/rating', {
                 method: 'POST',
-                body: JSON.stringify(ratingData)
+                body: JSON.stringify(requestData)
             });
+
+            // Инвалидируем кэш рейтингов
+            cacheManager.invalidate('ratings');
             return response;
         } catch (error) {
             console.error('Ошибка создания рейтинга:', error);
@@ -717,10 +763,21 @@ export const API = {
 
     async createReview(reviewData) {
         try {
+            // Унифицированная структура данных для бэкенда
+            const requestData = {
+                target_user_id: reviewData.target_user_id,
+                ride_id: reviewData.ride_id,
+                text: reviewData.text,
+                is_positive: reviewData.is_positive
+            };
+
             const response = await this.request('/api/rating/review', {
                 method: 'POST',
-                body: JSON.stringify(reviewData)
+                body: JSON.stringify(requestData)
             });
+
+            // Инвалидируем кэш отзывов
+            cacheManager.invalidate('reviews');
             return response;
         } catch (error) {
             console.error('Ошибка создания отзыва:', error);

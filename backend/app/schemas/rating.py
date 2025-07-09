@@ -15,6 +15,12 @@ class RatingCreate(RatingBase):
         if v < 1 or v > 5:
             raise ValueError('Рейтинг должен быть от 1 до 5')
         return v
+    
+    @validator('comment')
+    def validate_comment(cls, v):
+        if v is not None and len(v.strip()) < 10:
+            raise ValueError('Комментарий должен содержать минимум 10 символов')
+        return v.strip() if v else v
 
 class RatingUpdate(BaseModel):
     rating: Optional[int] = Field(None, ge=1, le=5, description="Рейтинг от 1 до 5 звезд")
@@ -53,6 +59,12 @@ class ReviewCreate(ReviewBase):
         if len(v.strip()) < 10:
             raise ValueError('Текст отзыва должен содержать минимум 10 символов')
         return v.strip()
+    
+    @validator('is_positive')
+    def validate_is_positive(cls, v):
+        if not isinstance(v, bool):
+            raise ValueError('is_positive должно быть булевым значением')
+        return v
 
 class ReviewResponse(ReviewBase):
     id: int
