@@ -1,17 +1,25 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from .config_simple import settings
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
-# Создание движка базы данных
+# Создание движка базы данных с улучшенными настройками
 engine = create_engine(
     settings.database_url,
     pool_pre_ping=True,
     pool_recycle=300,
-    echo=settings.debug
+    pool_size=10,
+    max_overflow=20,
+    echo=settings.debug,
+    connect_args={
+        "connect_timeout": 10,
+        "application_name": "pax_backend"
+    }
 )
 
 # Создание фабрики сессий
@@ -76,12 +84,6 @@ def create_indexes():
             conn.execute(text("CREATE INDEX IF NOT EXISTS idx_chat_messages_timestamp ON chat_messages(timestamp)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS idx_chat_messages_is_read ON chat_messages(is_read)"))
             
-            # Индексы для платежей (удалены - таблица payments больше не существует)
-            # conn.execute(text("CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id)"))
-            # conn.execute(text("CREATE INDEX IF NOT EXISTS idx_payments_ride_id ON payments(ride_id)"))
-            # conn.execute(text("CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status)"))
-            # conn.execute(text("CREATE INDEX IF NOT EXISTS idx_payments_created_at ON payments(created_at)"))
-            
             conn.commit()
             logger.info("Индексы успешно созданы")
             
@@ -90,13 +92,29 @@ def create_indexes():
         raise
 
 def check_db_connection():
-    """Проверка подключения к базе данных"""
-    try:
-        db = SessionLocal()
-        db.execute(text("SELECT 1"))
-        db.close()
-        logger.info("Подключение к базе данных успешно")
-        return True
-    except Exception as e:
-        logger.error(f"Ошибка подключения к базе данных: {e}")
-        return False 
+    """Проверка подключения к базе данных с retry логикой"""
+    max_retries = 3
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            db = SessionLocal()
+            db.execute(text("SELECT 1"))
+            db.close()
+            logger.info("Подключение к базе данных успешно")
+            return True
+        except OperationalError as e:
+            logger.warning(f"Попытка {attempt + 1}/{max_retries} подключения к БД не удалась: {e}")
+            if attempt < max_retries - 1:
+                logger.info(f"Повторная попытка через {retry_delay} секунды...")
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Экспоненциальная задержка
+            else:
+                logger.error(f"Все попытки подключения к БД исчерпаны. Последняя ошибка: {e}")
+                return False
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка SQLAlchemy при подключении к БД: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Неожиданная ошибка при подключении к БД: {e}")
+            return False 

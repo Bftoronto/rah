@@ -67,7 +67,9 @@ async def startup_event():
         # Проверка подключения к базе данных
         if not check_db_connection():
             logger.error("Не удалось подключиться к базе данных")
-            raise HTTPException(status_code=500, detail="Database connection failed")
+            logger.warning("Приложение запускается без подключения к БД - некоторые функции могут быть недоступны")
+            # НЕ ВЫХОДИМ ИЗ ПРИЛОЖЕНИЯ - позволяем ему запуститься
+            return
         
         # Инициализация базы данных
         init_db()
@@ -77,7 +79,8 @@ async def startup_event():
         
     except Exception as e:
         logger.error(f"Критическая ошибка при запуске: {e}")
-        sys.exit(1)
+        logger.warning("Приложение запускается с ошибками - некоторые функции могут быть недоступны")
+        # НЕ ВЫХОДИМ ИЗ ПРИЛОЖЕНИЯ - позволяем ему запуститься
 
 @app.on_event("shutdown")
 async def shutdown_event():

@@ -10,51 +10,58 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class SimpleSettings:
-    """Упрощенные настройки без проблемных переменных окружения"""
+    """Упрощенные настройки с поддержкой переменных окружения"""
     
     # Основные настройки
     app_name: str = "Ride Sharing API"
     version: str = "1.0.0"
-    debug: bool = True
+    debug: bool = os.getenv("DEBUG", "True").lower() == "true"
     
-    # База данных
-    database_url: str = "postgresql://paxmain_user:IUwzoIuzbKG9RuruiHSxBFTllTwaK4DN@localhost/paxmain"
+    # База данных - приоритет переменным окружения
+    database_url: str = os.getenv(
+        "DATABASE_URL", 
+        "postgresql://paxmain_user:IUwzoIuzbKG9RuruiHSxBFTllTwaK4DN@localhost/paxmain"
+    )
     
     # Telegram Bot
-    telegram_bot_token: str = "8187393599:AAEudOluahmhNJixt_hW8mvWjWC0eh1YIlA"
-    telegram_bot_username: str = "paxdemobot"
+    telegram_bot_token: str = os.getenv(
+        "TELEGRAM_BOT_TOKEN", 
+        "8187393599:AAEudOluahmhNJixt_hW8mvWjWC0eh1YIlA"
+    )
+    telegram_bot_username: str = os.getenv("TELEGRAM_BOT_USERNAME", "paxdemobot")
     
     # Безопасность
-    secret_key: str = "8f3b2c1e-4a5d-11ee-be56-0242ac120002"
+    secret_key: str = os.getenv(
+        "SECRET_KEY", 
+        "8f3b2c1e-4a5d-11ee-be56-0242ac120002"
+    )
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
+    access_token_expire_minutes: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
     
     # Загрузка файлов
-    upload_dir: str = "uploads"
-    max_file_size: int = 10 * 1024 * 1024  # 10MB
+    upload_dir: str = os.getenv("UPLOAD_DIR", "uploads")
+    max_file_size: int = int(os.getenv("MAX_FILE_SIZE", str(10 * 1024 * 1024)))  # 10MB
     allowed_file_types: List[str] = ["image/jpeg", "image/png", "image/gif"]
     
     # CORS
-    cors_origins: List[str] = ["*"]
+    cors_origins: List[str] = os.getenv("CORS_ORIGINS", "*").split(",")
     
     # Логирование
-    log_level: str = "INFO"
-    log_file: Optional[str] = None
+    log_level: str = os.getenv("LOG_LEVEL", "INFO")
+    log_file: Optional[str] = os.getenv("LOG_FILE")
     
     # Переменные окружения для разработки
-    environment: str = "development"
+    environment: str = os.getenv("ENVIRONMENT", "development")
     
     # Redis (для кэширования и сессий)
-    redis_url: Optional[str] = None
+    redis_url: Optional[str] = os.getenv("REDIS_URL")
     
     # Email (для уведомлений)
-    smtp_host: Optional[str] = None
-    smtp_port: int = 587
-    smtp_username: Optional[str] = None
-    smtp_password: Optional[str] = None
-    smtp_use_tls: bool = True
-    
-
+    smtp_host: Optional[str] = os.getenv("SMTP_HOST")
+    smtp_port: int = int(os.getenv("SMTP_PORT", "587"))
+    smtp_username: Optional[str] = os.getenv("SMTP_USERNAME")
+    smtp_password: Optional[str] = os.getenv("SMTP_PASSWORD")
+    smtp_use_tls: bool = os.getenv("SMTP_USE_TLS", "True").lower() == "true"
 
 # Создание экземпляра настроек
 settings = SimpleSettings()
