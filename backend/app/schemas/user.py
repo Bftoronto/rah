@@ -170,7 +170,7 @@ class UserRead(UserBase):
     profile_history: Optional[list] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class PrivacyPolicyAccept(BaseModel):
     accepted: bool

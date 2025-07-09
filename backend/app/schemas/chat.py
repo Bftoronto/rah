@@ -21,7 +21,7 @@ class ChatMessageRead(ChatMessageBase):
     timestamp: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Alias for backward compatibility
 MessageCreate = ChatMessageCreate
@@ -45,7 +45,7 @@ class ChatRead(ChatBase):
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ChatWithDetails(ChatRead):
     last_message: Optional[ChatMessageRead]

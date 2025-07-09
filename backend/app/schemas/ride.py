@@ -18,7 +18,7 @@ class RideRead(RideBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class RideUpdate(BaseModel):
     from_location: Optional[str]

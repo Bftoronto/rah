@@ -1,5 +1,5 @@
 import time
-import psutil
+import os
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from ..utils.logger import performance_logger, get_logger
@@ -70,15 +70,19 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
             raise
 
 class MemoryMonitor:
-    """Монитор использования памяти"""
+    """Монитор использования памяти (без psutil)"""
     
     @staticmethod
     def get_memory_usage() -> float:
         """Получить текущее использование памяти в МБ"""
         try:
-            process = psutil.Process()
-            memory_info = process.memory_info()
-            return memory_info.rss / 1024 / 1024  # Конвертируем в МБ
+            # Альтернативный способ получения информации о памяти
+            with open('/proc/self/status', 'r') as f:
+                for line in f:
+                    if line.startswith('VmRSS:'):
+                        memory_kb = int(line.split()[1])
+                        return memory_kb / 1024  # Конвертируем в МБ
+            return 0.0
         except Exception as e:
             logger.error(f"Ошибка получения информации о памяти: {str(e)}")
             return 0.0
