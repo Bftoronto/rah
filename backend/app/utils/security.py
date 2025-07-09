@@ -37,7 +37,7 @@ def verify_telegram_data(data: Dict[str, Any]) -> bool:
             return False
         
         # Получаем токен бота из переменных окружения
-        bot_token = os.getenv('TELEGRAM_BOT_TOKEN', '8187393599:AAEudOluahmhNJixt_hW8mvWjWC0eh1YIlA')
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN', '')
         if not bot_token:
             logger.error("Отсутствует TELEGRAM_BOT_TOKEN в переменных окружения")
             return False

@@ -17,14 +17,14 @@ class Settings(BaseSettings):
     debug: bool = False
     
     # База данных
-    database_url: str = "postgresql://paxmain_user:IUwzoIuzbKG9RuruiHSxBFTllTwaK4DN@dpg-d1lu8jnfte5s73dv6780-a/paxmain"
+    database_url: str = "postgresql://user:password@localhost/paxmain"
     
     # Telegram Bot
     telegram_bot_token: Optional[str] = None
     telegram_bot_username: Optional[str] = None
     
     # Безопасность
-    secret_key: str = "SECRET_KEY=8f3b2c1e-4a5d-11ee-be56-0242ac120002"
+    secret_key: str = "CHANGE_THIS_IN_PRODUCTION"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     

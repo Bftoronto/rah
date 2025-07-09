@@ -4,6 +4,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 import logging
 from fastapi import HTTPException, status
+from contextlib import contextmanager
 
 from ..models.ride import Ride
 from ..models.user import User
@@ -14,7 +15,34 @@ logger = logging.getLogger(__name__)
 
 class RideService:
     def __init__(self):
-        self.db: Session = next(get_db())
+        self._db_session = None
+    
+    @property
+    def db(self) -> Session:
+        """Получение сессии базы данных с автоматическим управлением"""
+        if self._db_session is None:
+            self._db_session = next(get_db())
+        return self._db_session
+    
+    def __del__(self):
+        """Деструктор для закрытия сессии"""
+        if self._db_session:
+            try:
+                self._db_session.close()
+            except Exception as e:
+                logger.error(f"Ошибка закрытия сессии БД: {e}")
+    
+    @contextmanager
+    def get_db_session(self):
+        """Контекстный менеджер для безопасной работы с БД"""
+        session = next(get_db())
+        try:
+            yield session
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
     def create_ride(self, ride_data: RideCreate, driver_id: int) -> Ride:
         """Создание новой поездки с оптимизированной валидацией"""
@@ -37,8 +65,10 @@ class RideService:
             if ride_data.price <= 0:
                 raise ValueError("Цена должна быть больше 0")
             
-            if ride_data.date <= datetime.utcnow():
-                raise ValueError("Дата поездки должна быть в будущем")
+            # Проверяем, что дата поездки в будущем (минимум через 1 час)
+            min_ride_time = datetime.utcnow() + timedelta(hours=1)
+            if ride_data.date <= min_ride_time:
+                raise ValueError("Дата поездки должна быть минимум через 1 час")
             
             # Создание поездки
             ride = Ride(

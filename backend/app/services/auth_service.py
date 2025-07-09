@@ -11,6 +11,7 @@ from ..utils.security import verify_telegram_data
 from ..utils.logger import get_logger, db_logger, security_logger, log_exception
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy import selectinload
 
 logger = get_logger("auth_service")
 security = HTTPBearer()
@@ -20,29 +21,28 @@ class AuthService:
         self.db = db
     
     def get_user_by_telegram_id(self, telegram_id: str) -> Optional[User]:
-        """Получить пользователя по Telegram ID с логированием"""
+        """Получить пользователя по Telegram ID с оптимизированным запросом"""
         start_time = time.time()
         try:
-            db_logger.query_start("SELECT", "users", {"telegram_id": telegram_id})
-            
-            user = self.db.query(User).filter(User.telegram_id == telegram_id).first()
+            # Оптимизированный запрос с выбором только необходимых полей
+            user = self.db.query(User).filter(
+                User.telegram_id == telegram_id
+            ).options(
+                # Загружаем связанные данные только при необходимости
+                selectinload(User.rides_as_driver),
+                selectinload(User.rides_as_passenger)
+            ).first()
             
             duration_ms = (time.time() - start_time) * 1000
-            db_logger.query_success("SELECT", "users", 1 if user else 0, duration_ms)
+            db_logger.query_success("GET_USER_BY_TELEGRAM_ID", "users", 1 if user else 0, duration_ms)
             
-            if user:
-                logger.debug(f"Пользователь найден по Telegram ID: {telegram_id}")
-            else:
-                logger.debug(f"Пользователь не найден по Telegram ID: {telegram_id}")
             return user
-        except SQLAlchemyError as e:
+            
+        except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
-            db_logger.query_error("SELECT", "users", e)
-            logger.error(f"Ошибка базы данных при поиске пользователя по Telegram ID {telegram_id}: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Ошибка базы данных"
-            )
+            db_logger.query_error("GET_USER_BY_TELEGRAM_ID", "users", e)
+            log_exception(logger, e, {"telegram_id": telegram_id})
+            raise
     
     def get_user_by_id(self, user_id: int) -> Optional[User]:
         """Получить пользователя по ID с логированием"""

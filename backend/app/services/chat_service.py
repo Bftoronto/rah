@@ -4,6 +4,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 import logging
 import json
+from contextlib import contextmanager
 
 from ..models.chat import ChatMessage, Chat
 from ..models.user import User
@@ -15,7 +16,34 @@ logger = logging.getLogger(__name__)
 
 class ChatService:
     def __init__(self):
-        self.db: Session = next(get_db())
+        self._db_session = None
+    
+    @property
+    def db(self) -> Session:
+        """Получение сессии базы данных с автоматическим управлением"""
+        if self._db_session is None:
+            self._db_session = next(get_db())
+        return self._db_session
+    
+    def __del__(self):
+        """Деструктор для закрытия сессии"""
+        if self._db_session:
+            try:
+                self._db_session.close()
+            except Exception as e:
+                logger.error(f"Ошибка закрытия сессии БД: {e}")
+    
+    @contextmanager
+    def get_db_session(self):
+        """Контекстный менеджер для безопасной работы с БД"""
+        session = next(get_db())
+        try:
+            yield session
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
     
     def create_chat(self, ride_id: int, user1_id: int, user2_id: int) -> Chat:
         """Создание нового чата между пользователями"""

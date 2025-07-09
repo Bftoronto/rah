@@ -5,7 +5,7 @@ import os
 from typing import Dict
 
 # Получаем токен из переменных окружения, если не задан — используем дефолтный
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8187393599:AAEudOluahmhNJixt_hW8mvWjWC0eh1YIlA")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 
 # Проверка подписи Telegram Login
 

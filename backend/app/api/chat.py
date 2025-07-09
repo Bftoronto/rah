@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from typing import List, Optional, Dict, Any
 import logging
 import json
+import asyncio
 
 from ..schemas.chat import ChatMessageCreate, ChatMessageRead, ChatCreate, ChatRead, ChatListResponse
 from ..services.chat_service import chat_service
@@ -16,37 +17,64 @@ logger = logging.getLogger(__name__)
 class ConnectionManager:
     def __init__(self):
         self.active_connections: Dict[int, WebSocket] = {}
+        self._lock = asyncio.Lock()  # Для потокобезопасности
 
     async def connect(self, websocket: WebSocket, user_id: int):
-        await websocket.accept()
-        self.active_connections[user_id] = websocket
-        logger.info(f"Пользователь {user_id} подключился к WebSocket")
+        """Безопасное подключение пользователя"""
+        try:
+            await websocket.accept()
+            async with self._lock:
+                self.active_connections[user_id] = websocket
+            logger.info(f"Пользователь {user_id} подключился к WebSocket")
+        except Exception as e:
+            logger.error(f"Ошибка подключения пользователя {user_id}: {e}")
+            raise
 
     def disconnect(self, user_id: int):
-        if user_id in self.active_connections:
-            del self.active_connections[user_id]
-            logger.info(f"Пользователь {user_id} отключился от WebSocket")
+        """Безопасное отключение пользователя"""
+        try:
+            if user_id in self.active_connections:
+                del self.active_connections[user_id]
+                logger.info(f"Пользователь {user_id} отключился от WebSocket")
+        except Exception as e:
+            logger.error(f"Ошибка отключения пользователя {user_id}: {e}")
 
     async def send_personal_message(self, message: str, user_id: int):
-        if user_id in self.active_connections:
-            try:
-                await self.active_connections[user_id].send_text(message)
-            except Exception as e:
-                logger.error(f"Ошибка отправки сообщения пользователю {user_id}: {e}")
-                self.disconnect(user_id)
+        """Безопасная отправка сообщения"""
+        try:
+            if user_id in self.active_connections:
+                websocket = self.active_connections[user_id]
+                await websocket.send_text(message)
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Ошибка отправки сообщения пользователю {user_id}: {e}")
+            self.disconnect(user_id)
+            return False
 
-    async def broadcast(self, message: str):
+    async def broadcast_message(self, message: str, exclude_user_id: Optional[int] = None):
+        """Отправка сообщения всем подключенным пользователям"""
         disconnected_users = []
-        for user_id, connection in self.active_connections.items():
+        for user_id, websocket in self.active_connections.items():
+            if user_id == exclude_user_id:
+                continue
             try:
-                await connection.send_text(message)
+                await websocket.send_text(message)
             except Exception as e:
                 logger.error(f"Ошибка отправки сообщения пользователю {user_id}: {e}")
                 disconnected_users.append(user_id)
         
-        # Удаление отключенных соединений
+        # Удаляем отключенных пользователей
         for user_id in disconnected_users:
             self.disconnect(user_id)
+
+    def get_connected_users(self) -> List[int]:
+        """Получить список подключенных пользователей"""
+        return list(self.active_connections.keys())
+
+    def get_connection_count(self) -> int:
+        """Получить количество активных соединений"""
+        return len(self.active_connections)
 
 manager = ConnectionManager()
 
