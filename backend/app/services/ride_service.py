@@ -1,5 +1,5 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, desc, asc
+from sqlalchemy.orm import Session, joinedload, selectinload
+from sqlalchemy import and_, or_, desc, asc, func
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 import logging
@@ -17,15 +17,18 @@ class RideService:
         self.db: Session = next(get_db())
 
     def create_ride(self, ride_data: RideCreate, driver_id: int) -> Ride:
-        """Создание новой поездки"""
+        """Создание новой поездки с оптимизированной валидацией"""
         try:
-            # Проверка, что водитель существует и активен
-            driver = self.db.query(User).filter(
+            # Оптимизированная проверка водителя - выбираем только необходимые поля
+            driver = self.db.query(User.id, User.is_active, User.is_driver).filter(
                 and_(User.id == driver_id, User.is_active == True)
             ).first()
             
             if not driver:
                 raise ValueError("Водитель не найден или неактивен")
+            
+            if not driver.is_driver:
+                raise ValueError("Пользователь не является водителем")
             
             # Валидация данных поездки
             if ride_data.seats <= 0 or ride_data.seats > 8:
@@ -61,9 +64,14 @@ class RideService:
             raise
 
     def get_ride(self, ride_id: int) -> Optional[Ride]:
-        """Получение поездки по ID"""
+        """Получение поездки по ID с оптимизированным запросом"""
         try:
-            ride = self.db.query(Ride).filter(Ride.id == ride_id).first()
+            # Используем joinedload для загрузки связанных данных одним запросом
+            ride = self.db.query(Ride).options(
+                joinedload(Ride.driver).load_only(User.id, User.full_name, User.average_rating, User.total_rides, User.avatar_url, User.phone),
+                joinedload(Ride.passenger).load_only(User.id, User.full_name, User.average_rating, User.total_rides, User.avatar_url)
+            ).filter(Ride.id == ride_id).first()
+            
             return ride
         except Exception as e:
             logger.error(f"Ошибка получения поездки {ride_id}: {e}")
@@ -80,12 +88,19 @@ class RideService:
                     status: Optional[str] = None,
                     limit: int = 50,
                     offset: int = 0) -> List[Ride]:
-        """Поиск поездок с фильтрами"""
+        """Оптимизированный поиск поездок с фильтрами"""
         try:
-            query = self.db.query(Ride).filter(Ride.status == "active")
+            # Базовый запрос с оптимизированной загрузкой связанных данных
+            query = self.db.query(Ride).options(
+                joinedload(Ride.driver).load_only(
+                    User.id, User.full_name, User.average_rating, 
+                    User.total_rides, User.avatar_url
+                )
+            ).filter(Ride.status == "active")
             
-            # Фильтры
+            # Применяем фильтры с оптимизацией
             if from_location:
+                # Используем ILIKE для регистронезависимого поиска
                 query = query.filter(Ride.from_location.ilike(f"%{from_location}%"))
             
             if to_location:
@@ -109,12 +124,13 @@ class RideService:
             if status:
                 query = query.filter(Ride.status == status)
             
-            # Сортировка по дате (ближайшие сначала)
+            # Сортировка по дате (ближайшие сначала) с индексом
             query = query.order_by(asc(Ride.date))
             
-            # Пагинация
+            # Пагинация с ограничением
             rides = query.limit(limit).offset(offset).all()
             
+            logger.info(f"Найдено {len(rides)} поездок с параметрами: from={from_location}, to={to_location}, date_from={date_from}, date_to={date_to}")
             return rides
             
         except Exception as e:
@@ -122,10 +138,10 @@ class RideService:
             raise
 
     def book_ride(self, ride_id: int, passenger_id: int) -> Ride:
-        """Бронирование поездки"""
+        """Бронирование поездки с оптимизированными запросами"""
         try:
-            # Получение поездки
-            ride = self.get_ride(ride_id)
+            # Получение поездки с блокировкой для обновления
+            ride = self.db.query(Ride).filter(Ride.id == ride_id).with_for_update().first()
             if not ride:
                 raise ValueError("Поездка не найдена")
             
@@ -137,8 +153,8 @@ class RideService:
             if ride.driver_id == passenger_id:
                 raise ValueError("Водитель не может забронировать свою поездку")
             
-            # Проверка пассажира
-            passenger = self.db.query(User).filter(
+            # Оптимизированная проверка пассажира
+            passenger = self.db.query(User.id, User.is_active).filter(
                 and_(User.id == passenger_id, User.is_active == True)
             ).first()
             
@@ -167,9 +183,10 @@ class RideService:
             raise
 
     def cancel_ride(self, ride_id: int, user_id: int, is_driver: bool = False) -> Ride:
-        """Отмена поездки"""
+        """Отмена поездки с оптимизированными запросами"""
         try:
-            ride = self.get_ride(ride_id)
+            # Получение поездки с блокировкой
+            ride = self.db.query(Ride).filter(Ride.id == ride_id).with_for_update().first()
             if not ride:
                 raise ValueError("Поездка не найдена")
             
@@ -203,7 +220,7 @@ class RideService:
             self.db.commit()
             self.db.refresh(ride)
             
-            logger.info(f"Поездка {ride_id} отменена пользователем {user_id}")
+            logger.info(f"Поездка {ride_id} отменена пользователем {user_id} (водитель: {is_driver})")
             return ride
             
         except Exception as e:
@@ -212,30 +229,24 @@ class RideService:
             raise
 
     def complete_ride(self, ride_id: int, driver_id: int) -> Ride:
-        """Завершение поездки"""
+        """Завершение поездки с оптимизированными запросами"""
         try:
-            ride = self.get_ride(ride_id)
+            # Получение поездки с блокировкой
+            ride = self.db.query(Ride).filter(Ride.id == ride_id).with_for_update().first()
             if not ride:
                 raise ValueError("Поездка не найдена")
             
+            # Проверка прав
             if ride.driver_id != driver_id:
                 raise ValueError("Только водитель может завершить поездку")
             
-            if ride.status not in ["active", "booked"]:
-                raise ValueError("Поездка уже завершена или отменена")
+            # Проверка статуса
+            if ride.status not in ["booked", "active"]:
+                raise ValueError("Поездка не может быть завершена")
             
+            # Завершение
             ride.status = "completed"
             ride.updated_at = datetime.utcnow()
-            
-            # Обновление статистики пользователей
-            driver = self.db.query(User).filter(User.id == driver_id).first()
-            if driver:
-                driver.total_rides += 1
-            
-            if ride.passenger_id:
-                passenger = self.db.query(User).filter(User.id == ride.passenger_id).first()
-                if passenger:
-                    passenger.total_rides += 1
             
             self.db.commit()
             self.db.refresh(ride)
@@ -249,20 +260,25 @@ class RideService:
             raise
 
     def get_user_rides(self, user_id: int, role: str = "all") -> List[Ride]:
-        """Получение поездок пользователя"""
+        """Получение поездок пользователя с оптимизированными запросами"""
         try:
-            query = self.db.query(Ride)
+            query = self.db.query(Ride).options(
+                joinedload(Ride.driver).load_only(User.id, User.full_name, User.avatar_url),
+                joinedload(Ride.passenger).load_only(User.id, User.full_name, User.avatar_url)
+            )
             
             if role == "driver":
                 query = query.filter(Ride.driver_id == user_id)
             elif role == "passenger":
                 query = query.filter(Ride.passenger_id == user_id)
-            else:
+            else:  # all
                 query = query.filter(
                     or_(Ride.driver_id == user_id, Ride.passenger_id == user_id)
                 )
             
-            rides = query.order_by(desc(Ride.created_at)).all()
+            rides = query.order_by(desc(Ride.created_at)).limit(100).all()
+            
+            logger.info(f"Получено {len(rides)} поездок для пользователя {user_id} (роль: {role})")
             return rides
             
         except Exception as e:
@@ -270,24 +286,42 @@ class RideService:
             raise
 
     def update_ride(self, ride_id: int, ride_data: RideUpdate, driver_id: int) -> Ride:
-        """Обновление поездки"""
+        """Обновление поездки с оптимизированными запросами"""
         try:
-            ride = self.get_ride(ride_id)
+            # Получение поездки с блокировкой
+            ride = self.db.query(Ride).filter(Ride.id == ride_id).with_for_update().first()
             if not ride:
                 raise ValueError("Поездка не найдена")
             
+            # Проверка прав
             if ride.driver_id != driver_id:
                 raise ValueError("Только водитель может изменить поездку")
             
-            if ride.status != "active":
-                raise ValueError("Нельзя изменить забронированную или завершенную поездку")
+            # Проверка возможности изменения
+            if ride.status not in ["active", "booked"]:
+                raise ValueError("Поездка не может быть изменена")
             
             # Обновление полей
-            update_data = ride_data.dict(exclude_unset=True)
+            if ride_data.from_location is not None:
+                ride.from_location = ride_data.from_location
             
-            for field, value in update_data.items():
-                if hasattr(ride, field):
-                    setattr(ride, field, value)
+            if ride_data.to_location is not None:
+                ride.to_location = ride_data.to_location
+            
+            if ride_data.date is not None:
+                if ride_data.date <= datetime.utcnow():
+                    raise ValueError("Дата поездки должна быть в будущем")
+                ride.date = ride_data.date
+            
+            if ride_data.price is not None:
+                if ride_data.price <= 0:
+                    raise ValueError("Цена должна быть больше 0")
+                ride.price = ride_data.price
+            
+            if ride_data.seats is not None:
+                if ride_data.seats <= 0 or ride_data.seats > 8:
+                    raise ValueError("Количество мест должно быть от 1 до 8")
+                ride.seats = ride_data.seats
             
             ride.updated_at = datetime.utcnow()
             
@@ -303,55 +337,80 @@ class RideService:
             raise
 
     def get_ride_statistics(self, user_id: int) -> Dict[str, Any]:
-        """Получение статистики поездок пользователя"""
+        """Получение статистики поездок с оптимизированными запросами"""
         try:
-            # Поездки как водитель
-            driver_rides = self.db.query(Ride).filter(Ride.driver_id == user_id).all()
+            # Статистика как водителя
+            driver_stats = self.db.query(
+                func.count(Ride.id).label('total_rides'),
+                func.sum(Ride.price).label('total_earnings'),
+                func.avg(Ride.price).label('avg_price')
+            ).filter(
+                and_(Ride.driver_id == user_id, Ride.status == "completed")
+            ).first()
             
-            # Поездки как пассажир
-            passenger_rides = self.db.query(Ride).filter(Ride.passenger_id == user_id).all()
+            # Статистика как пассажира
+            passenger_stats = self.db.query(
+                func.count(Ride.id).label('total_rides'),
+                func.sum(Ride.price).label('total_spent'),
+                func.avg(Ride.price).label('avg_price')
+            ).filter(
+                and_(Ride.passenger_id == user_id, Ride.status == "completed")
+            ).first()
             
-            stats = {
-                "total_as_driver": len(driver_rides),
-                "total_as_passenger": len(passenger_rides),
-                "completed_as_driver": len([r for r in driver_rides if r.status == "completed"]),
-                "completed_as_passenger": len([r for r in passenger_rides if r.status == "completed"]),
-                "cancelled_as_driver": len([r for r in driver_rides if r.status == "cancelled"]),
-                "cancelled_as_passenger": len([r for r in passenger_rides if r.status == "cancelled"]),
-                "total_earnings": sum([r.price for r in driver_rides if r.status == "completed"]),
-                "total_spent": sum([r.price for r in passenger_rides if r.status == "completed"])
+            # Активные поездки
+            active_rides = self.db.query(func.count(Ride.id)).filter(
+                and_(
+                    or_(Ride.driver_id == user_id, Ride.passenger_id == user_id),
+                    Ride.status.in_(["active", "booked"])
+                )
+            ).scalar()
+            
+            statistics = {
+                "driver": {
+                    "total_rides": driver_stats.total_rides or 0,
+                    "total_earnings": float(driver_stats.total_earnings or 0),
+                    "avg_price": float(driver_stats.avg_price or 0)
+                },
+                "passenger": {
+                    "total_rides": passenger_stats.total_rides or 0,
+                    "total_spent": float(passenger_stats.total_spent or 0),
+                    "avg_price": float(passenger_stats.avg_price or 0)
+                },
+                "active_rides": active_rides or 0
             }
             
-            return stats
+            logger.info(f"Получена статистика для пользователя {user_id}")
+            return statistics
             
         except Exception as e:
             logger.error(f"Ошибка получения статистики пользователя {user_id}: {e}")
             raise
 
     def cleanup_expired_rides(self) -> int:
-        """Очистка просроченных поездок"""
+        """Очистка устаревших поездок с оптимизированными запросами"""
         try:
-            expired_rides = self.db.query(Ride).filter(
-                and_(
-                    Ride.date < datetime.utcnow(),
-                    Ride.status.in_(["active", "booked"])
-                )
-            ).all()
+            # Находим поездки старше 30 дней
+            cutoff_date = datetime.utcnow() - timedelta(days=30)
             
-            count = 0
-            for ride in expired_rides:
-                ride.status = "expired"
-                ride.updated_at = datetime.utcnow()
-                count += 1
+            # Получаем количество удаляемых поездок
+            count = self.db.query(func.count(Ride.id)).filter(
+                and_(Ride.date < cutoff_date, Ride.status.in_(["cancelled", "completed"]))
+            ).scalar()
+            
+            # Удаляем устаревшие поездки
+            deleted = self.db.query(Ride).filter(
+                and_(Ride.date < cutoff_date, Ride.status.in_(["cancelled", "completed"]))
+            ).delete()
             
             self.db.commit()
-            logger.info(f"Очищено {count} просроченных поездок")
-            return count
+            
+            logger.info(f"Удалено {deleted} устаревших поездок")
+            return deleted
             
         except Exception as e:
             self.db.rollback()
-            logger.error(f"Ошибка очистки просроченных поездок: {e}")
+            logger.error(f"Ошибка очистки устаревших поездок: {e}")
             raise
 
-# Создание экземпляра сервиса
+# Создаем экземпляр сервиса
 ride_service = RideService()

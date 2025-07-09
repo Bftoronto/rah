@@ -2,10 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import Dict, Any
 import logging
+import os
+from pydantic import ValidationError
 
 from ..database import get_db
 from ..services.auth_service import AuthService
 from ..schemas.user import UserCreate, UserUpdate, UserRead, PrivacyPolicyAccept
+from ..schemas.telegram import TelegramWebAppData, TelegramVerificationRequest
 from ..utils.security import verify_telegram_data, extract_telegram_user_data
 
 logger = logging.getLogger(__name__)
@@ -13,16 +16,26 @@ router = APIRouter()
 
 @router.post('/telegram/verify')
 async def verify_telegram_user(request: Request, db: Session = Depends(get_db)):
-    """Верификация пользователя через Telegram Web App"""
+    """Верификация пользователя через Telegram Web App с строгой валидацией"""
     try:
-        # Получаем данные из запроса
-        telegram_data = await request.json()
+        # Получаем и валидируем данные из запроса
+        raw_data = await request.json()
         
-        logger.info(f"Received Telegram verification request: {telegram_data}")
+        # Строгая валидация через Pydantic
+        try:
+            telegram_data = TelegramWebAppData(**raw_data)
+        except ValidationError as e:
+            logger.warning(f"Валидация данных Telegram не прошла: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Некорректные данные Telegram: {str(e)}"
+            )
+        
+        logger.info(f"Получен запрос верификации Telegram для пользователя: {telegram_data.user.id}")
         
         # Верифицируем данные Telegram
-        if not verify_telegram_data(telegram_data):
-            logger.warning("Telegram data verification failed")
+        if not verify_telegram_data(telegram_data.dict()):
+            logger.warning(f"Верификация данных Telegram не прошла для пользователя: {telegram_data.user.id}")
             # В режиме разработки продолжаем без верификации
             if os.getenv('ENVIRONMENT', 'production') != 'development':
                 raise HTTPException(
@@ -30,8 +43,8 @@ async def verify_telegram_user(request: Request, db: Session = Depends(get_db)):
                     detail="Неверная подпись Telegram"
                 )
         
-        # Извлекаем данные пользователя из user объекта
-        user_data = extract_telegram_user_data(telegram_data.get('user', telegram_data))
+        # Извлекаем данные пользователя
+        user_data = extract_telegram_user_data(telegram_data.user.dict())
         telegram_id = str(user_data['id'])
         
         # Ищем пользователя в базе
@@ -40,6 +53,7 @@ async def verify_telegram_user(request: Request, db: Session = Depends(get_db)):
         
         if user:
             # Пользователь существует
+            logger.info(f"Пользователь найден: {telegram_id}")
             return {
                 "exists": True,
                 "user": UserRead.from_orm(user),
@@ -47,13 +61,22 @@ async def verify_telegram_user(request: Request, db: Session = Depends(get_db)):
             }
         else:
             # Пользователь не найден, нужно зарегистрироваться
+            logger.info(f"Пользователь не найден, требуется регистрация: {telegram_id}")
             return {
                 "exists": False,
                 "telegram_data": user_data
             }
             
+    except HTTPException:
+        raise
+    except ValidationError as e:
+        logger.error(f"Ошибка валидации данных: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Некорректные данные: {str(e)}"
+        )
     except Exception as e:
-        logger.error(f"Ошибка верификации Telegram: {str(e)}")
+        logger.error(f"Критическая ошибка верификации Telegram: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка верификации пользователя"
@@ -61,11 +84,12 @@ async def verify_telegram_user(request: Request, db: Session = Depends(get_db)):
 
 @router.post('/register')
 async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
-    """Регистрация нового пользователя"""
+    """Регистрация нового пользователя с валидацией"""
     try:
         auth_service = AuthService(db)
         user = auth_service.create_user(user_data)
         
+        logger.info(f"Пользователь успешно зарегистрирован: {user.telegram_id}")
         return {
             "success": True,
             "user": UserRead.from_orm(user),
@@ -74,8 +98,14 @@ async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
         
     except HTTPException:
         raise
+    except ValidationError as e:
+        logger.error(f"Ошибка валидации при регистрации: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Некорректные данные регистрации: {str(e)}"
+        )
     except Exception as e:
-        logger.error(f"Ошибка регистрации: {str(e)}")
+        logger.error(f"Критическая ошибка регистрации: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка регистрации пользователя"
@@ -87,11 +117,12 @@ async def update_profile(
     user_data: UserUpdate, 
     db: Session = Depends(get_db)
 ):
-    """Обновление профиля пользователя"""
+    """Обновление профиля пользователя с валидацией"""
     try:
         auth_service = AuthService(db)
         user = auth_service.update_user(user_id, user_data)
         
+        logger.info(f"Профиль пользователя обновлен: {user_id}")
         return {
             "success": True,
             "user": UserRead.from_orm(user),
@@ -100,8 +131,14 @@ async def update_profile(
         
     except HTTPException:
         raise
+    except ValidationError as e:
+        logger.error(f"Ошибка валидации при обновлении профиля: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Некорректные данные профиля: {str(e)}"
+        )
     except Exception as e:
-        logger.error(f"Ошибка обновления профиля: {str(e)}")
+        logger.error(f"Критическая ошибка обновления профиля: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка обновления профиля"
@@ -113,11 +150,12 @@ async def accept_privacy_policy(
     privacy_data: PrivacyPolicyAccept,
     db: Session = Depends(get_db)
 ):
-    """Принятие пользовательского соглашения"""
+    """Принятие пользовательского соглашения с валидацией"""
     try:
         auth_service = AuthService(db)
         user = auth_service.accept_privacy_policy(user_id, privacy_data)
         
+        logger.info(f"Пользовательское соглашение принято: {user_id}")
         return {
             "success": True,
             "user": UserRead.from_orm(user),
@@ -126,8 +164,14 @@ async def accept_privacy_policy(
         
     except HTTPException:
         raise
+    except ValidationError as e:
+        logger.error(f"Ошибка валидации при принятии соглашения: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Некорректные данные соглашения: {str(e)}"
+        )
     except Exception as e:
-        logger.error(f"Ошибка принятия соглашения: {str(e)}")
+        logger.error(f"Критическая ошибка принятия соглашения: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка принятия соглашения"
@@ -135,23 +179,32 @@ async def accept_privacy_policy(
 
 @router.get('/profile/{user_id}')
 async def get_user_profile(user_id: int, db: Session = Depends(get_db)):
-    """Получение профиля пользователя"""
+    """Получение профиля пользователя с валидацией ID"""
     try:
+        # Валидация user_id
+        if user_id <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Некорректный ID пользователя"
+            )
+        
         auth_service = AuthService(db)
         user = auth_service.get_user_by_id(user_id)
         
         if not user:
+            logger.warning(f"Пользователь не найден: {user_id}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Пользователь не найден"
             )
         
+        logger.info(f"Профиль пользователя получен: {user_id}")
         return UserRead.from_orm(user)
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Ошибка получения профиля: {str(e)}")
+        logger.error(f"Критическая ошибка получения профиля: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка получения профиля"
@@ -159,11 +212,19 @@ async def get_user_profile(user_id: int, db: Session = Depends(get_db)):
 
 @router.get('/profile/{user_id}/history')
 async def get_profile_history(user_id: int, db: Session = Depends(get_db)):
-    """Получение истории изменений профиля"""
+    """Получение истории изменений профиля с валидацией"""
     try:
+        # Валидация user_id
+        if user_id <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Некорректный ID пользователя"
+            )
+        
         auth_service = AuthService(db)
         history = auth_service.get_profile_history(user_id)
         
+        logger.info(f"История профиля получена: {user_id}")
         return {
             "user_id": user_id,
             "history": history
@@ -172,7 +233,7 @@ async def get_profile_history(user_id: int, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Ошибка получения истории профиля: {str(e)}")
+        logger.error(f"Критическая ошибка получения истории профиля: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка получения истории профиля"
@@ -198,17 +259,5 @@ async def get_privacy_policy():
         
         3. ОБРАБОТКА ПЕРСОНАЛЬНЫХ ДАННЫХ
         3.1. Сервис обрабатывает персональные данные в соответствии с законодательством РФ.
-        3.2. Пользователь дает согласие на обработку своих персональных данных.
-        
-        4. ОТВЕТСТВЕННОСТЬ
-        4.1. Сервис не несет ответственности за действия пользователей.
-        4.2. Пользователь несет полную ответственность за свои действия.
-        
-        5. ИЗМЕНЕНИЯ В СОГЛАШЕНИИ
-        5.1. Сервис оставляет за собой право изменять настоящее Соглашение.
-        5.2. Изменения вступают в силу с момента их публикации.
-        
-        Версия: 1.1
-        Дата вступления в силу: 01.01.2024
         """
     } 
