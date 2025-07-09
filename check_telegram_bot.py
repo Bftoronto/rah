@@ -89,7 +89,7 @@ def set_menu_button():
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/setChatMenuButton"
     
     # URL вашего приложения
-    web_app_url = "https://rah.pages.dev"
+    web_app_url = "https://frabjous-florentine-c506b0.netlify.app"
     
     payload = {
         "menu_button": {

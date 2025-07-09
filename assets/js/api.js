@@ -23,7 +23,7 @@ const API_CONFIG = {
 const getEnvironment = () => {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         return 'development';
-    } else if (window.location.hostname === 'rah.pages.dev') {
+    } else if (window.location.hostname === 'rah.pages.dev' || window.location.hostname === 'frabjous-florentine-c506b0.netlify.app') {
         return 'production';
     } else if (window.Telegram && window.Telegram.WebApp) {
         return 'telegram';
