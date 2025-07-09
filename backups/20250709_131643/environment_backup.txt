@@ -1,0 +1,27 @@
+# Резервная копия переменных окружения
+# Дата создания: $(date)
+
+# База данных
+DATABASE_URL=postgresql://paxmain_user:IUwzoIuzbKG9RuruiHSxBFTllTwaK4DN@dpg-d1lu8jnfte5s73dv6780-a/paxmain
+
+# Telegram Bot
+TELEGRAM_BOT_TOKEN=8187393599:AAEudOluahmhNJixt_hW8mvWjWC0eh1YIlA
+TELEGRAM_BOT_USERNAME=paxdemobot
+
+# Безопасность
+SECRET_KEY=8f3b2c1e-4a5d-11ee-be56-0242ac120002
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# Настройки приложения
+DEBUG=true
+ENVIRONMENT=production
+LOG_LEVEL=INFO
+
+# Загрузка файлов
+UPLOAD_DIR=uploads
+MAX_FILE_SIZE=10485760
+ALLOWED_FILE_TYPES=image/jpeg,image/png,image/gif
+
+# CORS
+CORS_ORIGINS=https://web.telegram.org,https://t.me,https://frabjous-florentine-c506b0.netlify.app,https://pax-backend-2gng.onrender.com

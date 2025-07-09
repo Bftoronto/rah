@@ -328,35 +328,7 @@ docker ps
 curl http://localhost
 ```
 
-### Вариант 3: Деплой на GitHub Pages (бесплатно)
 
-#### 1. Создание репозитория
-
-```bash
-# Инициализация git
-git init
-git add .
-git commit -m "Initial commit"
-
-# Создание репозитория на GitHub
-# Затем:
-git remote add origin https://github.com/your-username/rah-project.git
-git push -u origin main
-```
-
-#### 2. Настройка GitHub Pages
-
-1. Перейти в Settings → Pages
-2. Source: Deploy from a branch
-3. Branch: main
-4. Folder: / (root)
-5. Сохранить
-
-#### 3. Настройка домена (опционально)
-
-1. Добавить домен в настройках Pages
-2. Настроить DNS записи
-3. Получить SSL сертификат
 
 ### Настройка Telegram бота
 

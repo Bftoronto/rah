@@ -37,7 +37,7 @@ app.add_middleware(
         "http://localhost:8000",
         "https://localhost:3000",
         "https://localhost:8000",
-        "https://rah.pages.dev",
+
         "https://frabjous-florentine-c506b0.netlify.app",
         "https://pax-backend-2gng.onrender.com"
     ] + settings.cors_origins,

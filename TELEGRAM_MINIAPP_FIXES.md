@@ -8,7 +8,7 @@ Telegram Mini App не работал из-за неправильной кон�
 ### 1. Обновление URL фронтенда
 **Проблема**: Кнопка меню Telegram бота указывала на неправильный URL.
 **Решение**: 
-- Обновлен URL с `https://rah.pages.dev` на `https://frabjous-florentine-c506b0.netlify.app`
+- Обновлен URL на `https://frabjous-florentine-c506b0.netlify.app`
 - Запущен скрипт `check_telegram_bot.py` для обновления кнопки меню
 
 ### 2. Настройка CORS
@@ -93,7 +93,7 @@ allow_origins=[
 
 ### Frontend (`assets/js/api.js`)
 ```javascript
-} else if (window.location.hostname === 'rah.pages.dev' || 
+} else if (window.location.hostname === 'frabjous-florentine-c506b0.netlify.app' || 
            window.location.hostname === 'frabjous-florentine-c506b0.netlify.app') {
     return 'production';
 }
