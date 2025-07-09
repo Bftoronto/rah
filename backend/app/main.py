@@ -60,7 +60,7 @@ async def health_check():
     """Health check эндпоинт для мониторинга и keep-alive"""
     try:
         # Проверка подключения к базе данных
-        db_status = await check_db_connection()
+        db_status = check_db_connection()
         
         return {
             "status": "healthy" if db_status else "unhealthy",
