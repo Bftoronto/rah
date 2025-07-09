@@ -7,6 +7,10 @@ class App {
     constructor() {
         this.router = null;
         this.initialized = false;
+        this.keepAliveInterval = null;
+        this.errorRetryCount = 0;
+        this.maxRetries = 3;
+        this.retryDelay = 2000;
     }
 
     async init() {
@@ -25,6 +29,9 @@ class App {
             
             // Инициализация уведомлений
             this.initNotifications();
+            
+            // Запуск keep-alive механизма
+            this.startKeepAlive();
             
             // Загрузка данных пользователя и первый экран
             await this.loadInitialData();
@@ -126,6 +133,38 @@ class App {
         }
     }
 
+    startKeepAlive() {
+        // Keep-alive для предотвращения спин-дауна на Render
+        this.keepAliveInterval = setInterval(async () => {
+            try {
+                const response = await fetch('https://pax-backend-2gng.onrender.com/health', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    console.log('Keep-alive ping successful');
+                    this.errorRetryCount = 0; // Сброс счетчика ошибок при успешном ping
+                }
+            } catch (error) {
+                console.warn('Keep-alive ping failed:', error);
+                this.errorRetryCount++;
+                
+                if (this.errorRetryCount >= this.maxRetries) {
+                    console.error('Too many keep-alive failures, stopping');
+                    this.stopKeepAlive();
+                }
+            }
+        }, 10 * 60 * 1000); // Пинг каждые 10 минут
+    }
+
+    stopKeepAlive() {
+        if (this.keepAliveInterval) {
+            clearInterval(this.keepAliveInterval);
+            this.keepAliveInterval = null;
+        }
+    }
+
     async loadInitialData() {
         try {
             if (window.Telegram && window.Telegram.WebApp) {
@@ -147,69 +186,72 @@ class App {
                     
                     console.log('Sending verification data:', verificationData);
                     
-                    // Передаем данные для верификации
-                    const verificationResult = await API.verifyTelegramUser(verificationData);
-                    if (verificationResult.exists) {
-                        const user = verificationResult.user;
-                        stateManager.updateUserData(user);
-                        if (user.balance <= 0) {
-                            await this.router.navigate('restricted');
+                    // Передаем данные для верификации с retry логикой
+                    const verificationResult = await this.retryWithBackoff(() => 
+                        API.verifyTelegramUser(verificationData)
+                    );
+                    
+                    if (verificationResult && verificationResult.exists) {
+                        // Пользователь существует, загружаем его данные
+                        const userData = await this.retryWithBackoff(() => 
+                            API.getUserProfile(verificationResult.user_id)
+                        );
+                        
+                        if (userData) {
+                            stateManager.updateUserData(userData);
+                            if (userData.balance <= 0) {
+                                await this.router.navigate('restricted');
+                            } else {
+                                await this.router.navigate('findRide');
+                            }
                         } else {
-                            await this.router.navigate('findRide');
+                            throw new Error('Не удалось загрузить данные пользователя');
                         }
                     } else {
+                        // Новый пользователь, показываем экран регистрации
                         stateManager.setState('registrationData', {
-                            telegramData: verificationResult.telegram_data
+                            telegramData: telegramInitData.user
                         });
                         await this.router.navigate('privacyPolicy');
                     }
                 } else {
-                    // Fallback для отладки или тестирования
-                    console.warn('Telegram user data not available, checking for test environment');
-                    
-                    // Попытка получить данные из URL параметров (для тестирования)
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const testUserId = urlParams.get('test_user_id');
-                    
-                    if (testUserId) {
-                        // Тестовый режим
-                        console.log('Using test user ID:', testUserId);
-                        const testVerificationData = {
-                            user: {
-                                id: parseInt(testUserId),
-                                first_name: 'Test',
-                                last_name: 'User',
-                                username: 'testuser',
-                                language_code: 'ru'
-                            },
-                            auth_date: Math.floor(Date.now() / 1000),
-                            hash: 'test_hash_' + testUserId
-                        };
-                        
-                        try {
-                            const verificationResult = await API.verifyTelegramUser(testVerificationData);
-                            if (verificationResult.exists) {
-                                const user = verificationResult.user;
-                                stateManager.updateUserData(user);
-                                await this.router.navigate('findRide');
-                                return;
-                            }
-                        } catch (error) {
-                            console.error('Test verification failed:', error);
-                        }
-                    }
-                    
-                    Utils.showNotification('Ошибка', 'Нет данных Telegram. Откройте приложение через Telegram.', 'error');
-                    await this.router.navigate('restricted');
+                    // Данные Telegram недоступны, показываем экран входа
+                    await this.router.navigate('login');
                 }
             } else {
-                Utils.showNotification('Ошибка', 'Приложение доступно только через Telegram.', 'error');
-                await this.router.navigate('restricted');
+                // Запущено вне Telegram, показываем экран входа
+                await this.router.navigate('login');
             }
         } catch (error) {
-            console.error('Ошибка загрузки данных пользователя:', error);
-            Utils.showNotification('Ошибка', 'Ошибка загрузки данных пользователя', 'error');
-            await this.router.navigate('restricted');
+            console.error('Ошибка загрузки начальных данных:', error);
+            
+            // Показываем уведомление об ошибке
+            Utils.showNotification(
+                'Ошибка подключения',
+                'Проверьте интернет-соединение и попробуйте снова',
+                'error'
+            );
+            
+            // Показываем экран ошибки с возможностью повтора
+            this.showErrorScreen();
+        }
+    }
+
+    async retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                return await fn();
+            } catch (error) {
+                console.warn(`Attempt ${attempt + 1} failed:`, error);
+                
+                if (attempt === maxRetries - 1) {
+                    throw error; // Последняя попытка, пробрасываем ошибку
+                }
+                
+                // Экспоненциальная задержка с jitter
+                const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000;
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
         }
     }
 

@@ -50,10 +50,35 @@ app.add_middleware(
 if os.path.exists(settings.upload_dir):
     app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
 
+# Health check эндпоинт для keep-alive
+@app.get("/health")
+async def health_check():
+    """Health check эндпоинт для мониторинга и keep-alive"""
+    try:
+        # Проверка подключения к базе данных
+        db_status = await check_db_connection()
+        
+        return {
+            "status": "healthy" if db_status else "unhealthy",
+            "timestamp": time.time(),
+            "database": "connected" if db_status else "disconnected",
+            "version": settings.version,
+            "environment": settings.environment
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {
+            "status": "unhealthy",
+            "timestamp": time.time(),
+            "error": str(e),
+            "version": settings.version,
+            "environment": settings.environment
+        }
+
 # Подключение роутеров
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(rides.router, prefix="/api/rides", tags=["rides"])
-app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
+app.include_router(profile.router, prefix="/api/user", tags=["user"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(upload.router, prefix="/api/upload", tags=["upload"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
@@ -144,60 +169,6 @@ async def root():
         "timestamp": time.time(),
         "memory_usage_mb": round(MemoryMonitor.get_memory_usage(), 2)
     }
-
-@app.get("/health")
-async def health_check():
-    """Проверка здоровья приложения с детальной диагностикой"""
-    start_time = time.time()
-    
-    try:
-        # Проверяем базу данных
-        db_status = check_db_connection()
-        
-        # Проверяем использование памяти
-        memory_usage = MemoryMonitor.get_memory_usage()
-        
-        # Рассчитываем время проверки
-        health_check_duration = (time.time() - start_time) * 1000
-        
-        health_status = "healthy" if db_status else "unhealthy"
-        
-        # Логируем результат проверки здоровья
-        performance_logger.api_request(
-            endpoint="/health",
-            method="GET",
-            duration_ms=health_check_duration,
-            status_code=200 if db_status else 503
-        )
-        
-        return {
-            "status": health_status,
-            "database": "connected" if db_status else "disconnected",
-            "version": settings.version,
-            "timestamp": time.time(),
-            "memory_usage_mb": round(memory_usage, 2),
-            "response_time_ms": round(health_check_duration, 2)
-        }
-        
-    except Exception as e:
-        health_check_duration = (time.time() - start_time) * 1000
-        
-        logger.error("Health check failed", {"error": str(e)})
-        
-        performance_logger.api_request(
-            endpoint="/health",
-            method="GET",
-            duration_ms=health_check_duration,
-            status_code=500
-        )
-        
-        return {
-            "status": "unhealthy",
-            "error": str(e),
-            "version": settings.version,
-            "timestamp": time.time(),
-            "response_time_ms": round(health_check_duration, 2)
-        }
 
 @app.get("/api/info")
 async def api_info():
