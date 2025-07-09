@@ -40,7 +40,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://rideshare_user:rideshare_password@postgres:5432/ridesharing
       - REDIS_URL=redis://redis:6379
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_BOT_TOKEN=8187393599:AAEudOluahmhNJixt_hW8mvWjWC0eh1YIlA
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=true
     volumes:

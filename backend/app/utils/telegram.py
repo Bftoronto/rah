@@ -1,9 +1,11 @@
 import hashlib
 import hmac
 import time
+import os
 from typing import Dict
 
-TELEGRAM_BOT_TOKEN = "8187393599:AAEudOluahmhNJixt_hW8mvWjWC0eh1YIlA"
+# Получаем токен из переменных окружения, если не задан — используем дефолтный
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8187393599:AAEudOluahmhNJixt_hW8mvWjWC0eh1YIlA")
 
 # Проверка подписи Telegram Login
 
