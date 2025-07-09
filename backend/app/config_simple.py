@@ -18,7 +18,7 @@ class SimpleSettings:
     debug: bool = True
     
     # База данных
-    database_url: str = "postgresql://paxmain_user:IUwzoIuzbKG9RuruiHSxBFTllTwaK4DN@dpg-d1lu8jnfte5s73dv6780-a/paxmain"
+    database_url: str = "postgresql://paxmain_user:IUwzoIuzbKG9RuruiHSxBFTllTwaK4DN@localhost/paxmain"
     
     # Telegram Bot
     telegram_bot_token: str = "8187393599:AAEudOluahmhNJixt_hW8mvWjWC0eh1YIlA"

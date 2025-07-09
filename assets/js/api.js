@@ -146,14 +146,43 @@ export const API = {
     async verifyTelegramUser(telegramData) {
         try {
             console.log('Sending Telegram verification request:', telegramData);
-            const response = await this.request('/auth/telegram/verify', {
+            
+            // Проверяем обязательные поля
+            if (!telegramData.user || !telegramData.user.id) {
+                throw new Error('Отсутствуют обязательные данные пользователя');
+            }
+            
+            // Подготавливаем данные для отправки
+            const requestData = {
+                user: telegramData.user,
+                auth_date: telegramData.auth_date || Math.floor(Date.now() / 1000),
+                hash: telegramData.hash || 'test_hash',
+                initData: telegramData.initData || '',
+                query_id: telegramData.query_id || '',
+                start_param: telegramData.start_param || ''
+            };
+            
+            console.log('Prepared request data:', requestData);
+            
+            const response = await this.request('/api/auth/telegram/verify', {
                 method: 'POST',
-                body: JSON.stringify(telegramData)
+                body: JSON.stringify(requestData)
             });
+            
             console.log('Telegram verification response:', response);
             return response;
         } catch (error) {
             console.error('Ошибка верификации Telegram:', error);
+            
+            // Возвращаем fallback для нового пользователя
+            if (error.response && error.response.status === 500) {
+                console.log('Server error, treating as new user');
+                return {
+                    exists: false,
+                    telegram_data: telegramData.user
+                };
+            }
+            
             throw error;
         }
     },

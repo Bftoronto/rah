@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест верификации Telegram</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Тест верификации Telegram</h1>
+        
+        <div class="test-section">
+            <h3>1. Проверка Telegram Web App</h3>
+            <button onclick="checkTelegramWebApp()">Проверить Telegram Web App</button>
+            <div id="telegram-check-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>2. Извлечение данных пользователя</h3>
+            <button onclick="extractUserData()">Извлечь данные пользователя</button>
+            <div id="user-data-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>3. Тест верификации (реальные данные)</h3>
+            <button onclick="testRealVerification()">Тест с реальными данными</button>
+            <div id="real-verification-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>4. Тест верификации (тестовые данные)</h3>
+            <button onclick="testMockVerification()">Тест с тестовыми данными</button>
+            <div id="mock-verification-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>5. Проверка эндпоинтов API</h3>
+            <button onclick="testApiEndpoints()">Проверить API</button>
+            <div id="api-test-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>6. Полная имитация запуска приложения</h3>
+            <button onclick="simulateAppStart()">Имитировать запуск</button>
+            <div id="app-simulation-result" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://pax-backend-2gng.onrender.com';
+        
+        function log(message, elementId, type = 'info') {
+            const element = document.getElementById(elementId);
+            const statusClass = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'info';
+            element.innerHTML += `<div class="status ${statusClass}">${message}</div>`;
+            console.log(message);
+        }
+        
+        function clearResult(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+        
+        // 1. Проверка Telegram Web App
+        function checkTelegramWebApp() {
+            clearResult('telegram-check-result');
+            
+            if (window.Telegram && window.Telegram.WebApp) {
+                const tg = window.Telegram.WebApp;
+                log('✅ Telegram Web App доступен', 'telegram-check-result', 'success');
+                
+                try {
+                    tg.expand();
+                    log('✅ WebApp расширен', 'telegram-check-result', 'success');
+                } catch (e) {
+                    log('⚠️ Ошибка расширения: ' + e.message, 'telegram-check-result', 'warning');
+                }
+                
+                log(`<pre>InitData: ${tg.initData || 'Отсутствует'}</pre>`, 'telegram-check-result');
+                log(`<pre>InitDataUnsafe: ${JSON.stringify(tg.initDataUnsafe, null, 2)}</pre>`, 'telegram-check-result');
+                
+            } else {
+                log('❌ Telegram Web App недоступен', 'telegram-check-result', 'error');
+            }
+        }
+        
+        // 2. Извлечение данных пользователя
+        function extractUserData() {
+            clearResult('user-data-result');
+            
+            if (window.Telegram && window.Telegram.WebApp) {
+                const tg = window.Telegram.WebApp;
+                const initData = tg.initDataUnsafe;
+                
+                if (initData && initData.user) {
+                    log('✅ Данные пользователя найдены', 'user-data-result', 'success');
+                    
+                    const userData = {
+                        id: initData.user.id,
+                        first_name: initData.user.first_name,
+                        last_name: initData.user.last_name,
+                        username: initData.user.username,
+                        language_code: initData.user.language_code,
+                        photo_url: initData.user.photo_url
+                    };
+                    
+                    log(`<pre>${JSON.stringify(userData, null, 2)}</pre>`, 'user-data-result');
+                    
+                    // Дополнительные данные
+                    const additionalData = {
+                        auth_date: initData.auth_date,
+                        hash: initData.hash,
+                        query_id: initData.query_id,
+                        start_param: initData.start_param
+                    };
+                    
+                    log('<strong>Дополнительные данные:</strong>', 'user-data-result');
+                    log(`<pre>${JSON.stringify(additionalData, null, 2)}</pre>`, 'user-data-result');
+                    
+                } else {
+                    log('❌ Данные пользователя отсутствуют', 'user-data-result', 'error');
+                }
+            } else {
+                log('❌ Telegram Web App недоступен', 'user-data-result', 'error');
+            }
+        }
+        
+        // 3. Тест верификации с реальными данными
+        async function testRealVerification() {
+            clearResult('real-verification-result');
+            
+            if (!window.Telegram || !window.Telegram.WebApp) {
+                log('❌ Telegram Web App недоступен', 'real-verification-result', 'error');
+                return;
+            }
+            
+            const tg = window.Telegram.WebApp;
+            const initData = tg.initDataUnsafe;
+            
+            if (!initData || !initData.user) {
+                log('❌ Данные пользователя отсутствуют', 'real-verification-result', 'error');
+                return;
+            }
+            
+            const verificationData = {
+                user: initData.user,
+                auth_date: initData.auth_date || Math.floor(Date.now() / 1000),
+                hash: initData.hash || 'test_hash',
+                initData: tg.initData || '',
+                query_id: initData.query_id || '',
+                start_param: initData.start_param || ''
+            };
+            
+            log('Отправка данных для верификации...', 'real-verification-result');
+            log(`<pre>${JSON.stringify(verificationData, null, 2)}</pre>`, 'real-verification-result');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/auth/telegram/verify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(verificationData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    log('✅ Верификация прошла успешно', 'real-verification-result', 'success');
+                    log(`<pre>${JSON.stringify(result, null, 2)}</pre>`, 'real-verification-result');
+                } else {
+                    log(`⚠️ Ошибка верификации (${response.status})`, 'real-verification-result', 'warning');
+                    log(`<pre>${JSON.stringify(result, null, 2)}</pre>`, 'real-verification-result');
+                }
+                
+            } catch (error) {
+                log('❌ Ошибка запроса: ' + error.message, 'real-verification-result', 'error');
+            }
+        }
+        
+        // 4. Тест верификации с тестовыми данными
+        async function testMockVerification() {
+            clearResult('mock-verification-result');
+            
+            const mockData = {
+                user: {
+                    id: 123456789,
+                    first_name: 'Test',
+                    last_name: 'User',
+                    username: 'testuser',
+                    language_code: 'ru'
+                },
+                auth_date: Math.floor(Date.now() / 1000),
+                hash: 'test_hash_123456789',
+                initData: 'mock_init_data',
+                query_id: 'mock_query_id',
+                start_param: 'test_start'
+            };
+            
+            log('Отправка тестовых данных...', 'mock-verification-result');
+            log(`<pre>${JSON.stringify(mockData, null, 2)}</pre>`, 'mock-verification-result');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/auth/telegram/verify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(mockData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    log('✅ Тестовая верификация прошла успешно', 'mock-verification-result', 'success');
+                    log(`<pre>${JSON.stringify(result, null, 2)}</pre>`, 'mock-verification-result');
+                } else {
+                    log(`⚠️ Ошибка тестовой верификации (${response.status})`, 'mock-verification-result', 'warning');
+                    log(`<pre>${JSON.stringify(result, null, 2)}</pre>`, 'mock-verification-result');
+                }
+                
+            } catch (error) {
+                log('❌ Ошибка запроса: ' + error.message, 'mock-verification-result', 'error');
+            }
+        }
+        
+        // 5. Проверка эндпоинтов API
+        async function testApiEndpoints() {
+            clearResult('api-test-result');
+            
+            const endpoints = [
+                '/',
+                '/health',
+                '/api/info'
+            ];
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}${endpoint}`);
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        log(`✅ ${endpoint}: OK`, 'api-test-result', 'success');
+                    } else {
+                        log(`⚠️ ${endpoint}: ${response.status}`, 'api-test-result', 'warning');
+                    }
+                } catch (error) {
+                    log(`❌ ${endpoint}: ${error.message}`, 'api-test-result', 'error');
+                }
+            }
+        }
+        
+        // 6. Полная имитация запуска приложения
+        async function simulateAppStart() {
+            clearResult('app-simulation-result');
+            
+            log('🚀 Имитация запуска приложения...', 'app-simulation-result');
+            
+            // Шаг 1: Проверка Telegram Web App
+            if (window.Telegram && window.Telegram.WebApp) {
+                log('✅ Telegram Web App обнаружен', 'app-simulation-result', 'success');
+                
+                const tg = window.Telegram.WebApp;
+                const initData = tg.initDataUnsafe;
+                
+                if (initData && initData.user && initData.user.id) {
+                    log('✅ Данные пользователя найдены', 'app-simulation-result', 'success');
+                    
+                    // Шаг 2: Подготовка данных для верификации
+                    const verificationData = {
+                        initData: tg.initData,
+                        initDataUnsafe: initData,
+                        user: initData.user,
+                        hash: initData.hash || tg.initData,
+                        auth_date: initData.auth_date || Math.floor(Date.now() / 1000),
+                        query_id: initData.query_id,
+                        start_param: initData.start_param
+                    };
+                    
+                    log('✅ Данные для верификации подготовлены', 'app-simulation-result', 'success');
+                    
+                    // Шаг 3: Отправка на верификацию
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/api/auth/telegram/verify`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(verificationData)
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (response.ok) {
+                            if (result.exists) {
+                                log('✅ Пользователь найден в системе', 'app-simulation-result', 'success');
+                                log('➡️ Переход к главному экрану', 'app-simulation-result', 'info');
+                            } else {
+                                log('⚠️ Новый пользователь', 'app-simulation-result', 'warning');
+                                log('➡️ Переход к регистрации', 'app-simulation-result', 'info');
+                            }
+                        } else {
+                            log(`❌ Ошибка верификации: ${response.status}`, 'app-simulation-result', 'error');
+                            log('➡️ Переход к экрану ошибки', 'app-simulation-result', 'info');
+                        }
+                        
+                    } catch (error) {
+                        log('❌ Ошибка сети: ' + error.message, 'app-simulation-result', 'error');
+                        log('➡️ Переход к экрану ошибки', 'app-simulation-result', 'info');
+                    }
+                    
+                } else {
+                    log('❌ Данные пользователя отсутствуют', 'app-simulation-result', 'error');
+                    log('➡️ Переход к экрану ограничения', 'app-simulation-result', 'info');
+                }
+                
+            } else {
+                log('❌ Telegram Web App недоступен', 'app-simulation-result', 'error');
+                log('➡️ Переход к экрану ошибки', 'app-simulation-result', 'info');
+            }
+        }
+        
+        // Автоматический запуск при загрузке
+        window.addEventListener('load', function() {
+            console.log('Страница загружена, готова к тестированию');
+        });
+    </script>
+</body>
+</html>

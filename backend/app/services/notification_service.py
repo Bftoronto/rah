@@ -6,7 +6,7 @@ from typing import Dict, List, Optional, Any
 from sqlalchemy.orm import Session
 from ..models.user import User
 from ..models.notification import NotificationLog, NotificationSettings
-from ..config import settings
+from ..config_simple import settings
 
 logger = logging.getLogger(__name__)
 

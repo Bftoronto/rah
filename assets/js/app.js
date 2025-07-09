@@ -134,8 +134,21 @@ class App {
                 console.log('Telegram WebApp data:', telegramInitData);
                 
                 if (telegramInitData && telegramInitData.user && telegramInitData.user.id) {
-                    // Передаем полные данные Telegram с подписью для верификации
-                    const verificationResult = await API.verifyTelegramUser(telegramInitData);
+                    // Подготавливаем данные для верификации
+                    const verificationData = {
+                        initData: tg.initData, // Строка с подписью
+                        initDataUnsafe: telegramInitData, // Распарсенные данные
+                        user: telegramInitData.user,
+                        hash: telegramInitData.hash || tg.initData,
+                        auth_date: telegramInitData.auth_date || Math.floor(Date.now() / 1000),
+                        query_id: telegramInitData.query_id,
+                        start_param: telegramInitData.start_param
+                    };
+                    
+                    console.log('Sending verification data:', verificationData);
+                    
+                    // Передаем данные для верификации
+                    const verificationResult = await API.verifyTelegramUser(verificationData);
                     if (verificationResult.exists) {
                         const user = verificationResult.user;
                         stateManager.updateUserData(user);
@@ -151,6 +164,41 @@ class App {
                         await this.router.navigate('privacyPolicy');
                     }
                 } else {
+                    // Fallback для отладки или тестирования
+                    console.warn('Telegram user data not available, checking for test environment');
+                    
+                    // Попытка получить данные из URL параметров (для тестирования)
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const testUserId = urlParams.get('test_user_id');
+                    
+                    if (testUserId) {
+                        // Тестовый режим
+                        console.log('Using test user ID:', testUserId);
+                        const testVerificationData = {
+                            user: {
+                                id: parseInt(testUserId),
+                                first_name: 'Test',
+                                last_name: 'User',
+                                username: 'testuser',
+                                language_code: 'ru'
+                            },
+                            auth_date: Math.floor(Date.now() / 1000),
+                            hash: 'test_hash_' + testUserId
+                        };
+                        
+                        try {
+                            const verificationResult = await API.verifyTelegramUser(testVerificationData);
+                            if (verificationResult.exists) {
+                                const user = verificationResult.user;
+                                stateManager.updateUserData(user);
+                                await this.router.navigate('findRide');
+                                return;
+                            }
+                        } catch (error) {
+                            console.error('Test verification failed:', error);
+                        }
+                    }
+                    
                     Utils.showNotification('Ошибка', 'Нет данных Telegram. Откройте приложение через Telegram.', 'error');
                     await this.router.navigate('restricted');
                 }

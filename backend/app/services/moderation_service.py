@@ -7,7 +7,7 @@ from sqlalchemy import and_, or_
 from ..models.user import User
 from ..models.ride import Ride
 from ..models.moderation import ModerationReport, ModerationAction, ModerationRule
-from ..config import settings
+from ..config_simple import settings
 
 logger = logging.getLogger(__name__)
 
