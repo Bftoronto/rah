@@ -32,7 +32,7 @@ def init_db():
     """Инициализация базы данных"""
     try:
         # Импорт всех моделей для создания таблиц
-        from .models import user, ride, chat, payment, upload, notification, moderation, rating
+        from .models import user, ride, chat, upload, notification, moderation, rating
         
         # Создание всех таблиц
         Base.metadata.create_all(bind=engine)
@@ -76,11 +76,11 @@ def create_indexes():
             conn.execute(text("CREATE INDEX IF NOT EXISTS idx_chat_messages_timestamp ON chat_messages(timestamp)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS idx_chat_messages_is_read ON chat_messages(is_read)"))
             
-            # Индексы для платежей
-            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id)"))
-            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_payments_ride_id ON payments(ride_id)"))
-            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status)"))
-            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_payments_created_at ON payments(created_at)"))
+            # Индексы для платежей (удалены - таблица payments больше не существует)
+            # conn.execute(text("CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id)"))
+            # conn.execute(text("CREATE INDEX IF NOT EXISTS idx_payments_ride_id ON payments(ride_id)"))
+            # conn.execute(text("CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status)"))
+            # conn.execute(text("CREATE INDEX IF NOT EXISTS idx_payments_created_at ON payments(created_at)"))
             
             conn.commit()
             logger.info("Индексы успешно созданы")
