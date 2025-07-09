@@ -8,44 +8,65 @@ from pydantic import ValidationError
 from ..database import get_db
 from ..services.auth_service import AuthService
 from ..schemas.user import UserCreate, UserUpdate, UserRead, PrivacyPolicyAccept
-from ..schemas.telegram import TelegramWebAppData, TelegramVerificationRequest
+from ..models.user import User
+from ..schemas.telegram import TelegramWebAppData, TelegramVerificationRequest, TelegramAuthRequest
 from ..utils.security import verify_telegram_data, extract_telegram_user_data
+from ..utils.jwt_auth import get_current_user_optional, require_auth, require_driver, require_verified_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.post('/telegram/verify')
 async def verify_telegram_user(request: Request, db: Session = Depends(get_db)):
-    """Верификация пользователя через Telegram Web App с строгой валидацией"""
+    """Верификация пользователя через Telegram Web App с поддержкой разных форматов данных"""
     try:
         # Получаем и валидируем данные из запроса
         raw_data = await request.json()
         
-        # Строгая валидация через Pydantic
+        # Пытаемся валидировать через разные схемы
+        telegram_data = None
+        user_data = None
+        
+        # Сначала пробуем новую схему для совместимости с фронтендом
         try:
-            telegram_data = TelegramWebAppData(**raw_data)
-        except ValidationError as e:
-            logger.warning(f"Валидация данных Telegram не прошла: {e}")
+            auth_request = TelegramAuthRequest(**raw_data)
+            telegram_data = auth_request.dict()
+            user_data = auth_request.user.dict()
+            logger.info(f"Использована схема TelegramAuthRequest для пользователя: {auth_request.user.id}")
+        except ValidationError:
+            # Если не подходит, пробуем старую схему
+            try:
+                webapp_data = TelegramWebAppData(**raw_data)
+                telegram_data = webapp_data.dict()
+                user_data = webapp_data.user.dict()
+                logger.info(f"Использована схема TelegramWebAppData для пользователя: {webapp_data.user.id}")
+            except ValidationError as e:
+                logger.warning(f"Валидация данных Telegram не прошла: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Некорректные данные Telegram: {str(e)}"
+                )
+        
+        # Извлекаем Telegram ID
+        telegram_id = str(user_data.get('id'))
+        if not telegram_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Некорректные данные Telegram: {str(e)}"
+                detail="Отсутствует Telegram ID"
             )
         
-        logger.info(f"Получен запрос верификации Telegram для пользователя: {telegram_data.user.id}")
+        logger.info(f"Получен запрос верификации Telegram для пользователя: {telegram_id}")
         
-        # Верифицируем данные Telegram
-        if not verify_telegram_data(telegram_data.dict()):
-            logger.warning(f"Верификация данных Telegram не прошла для пользователя: {telegram_data.user.id}")
-            # В режиме разработки продолжаем без верификации
-            if os.getenv('ENVIRONMENT', 'production') != 'development':
+        # Верифицируем данные Telegram (в режиме разработки пропускаем)
+        if os.getenv('ENVIRONMENT', 'production') == 'development':
+            logger.info("Режим разработки: пропускаем верификацию подписи Telegram")
+        else:
+            if not verify_telegram_data(telegram_data):
+                logger.warning(f"Верификация данных Telegram не прошла для пользователя: {telegram_id}")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Неверная подпись Telegram"
                 )
-        
-        # Извлекаем данные пользователя
-        user_data = extract_telegram_user_data(telegram_data.user.dict())
-        telegram_id = str(user_data['id'])
         
         # Ищем пользователя в базе
         auth_service = AuthService(db)
@@ -260,4 +281,92 @@ async def get_privacy_policy():
         3. ОБРАБОТКА ПЕРСОНАЛЬНЫХ ДАННЫХ
         3.1. Сервис обрабатывает персональные данные в соответствии с законодательством РФ.
         """
-    } 
+    }
+
+@router.post('/login')
+async def login_user(telegram_data: TelegramAuthRequest, db: Session = Depends(get_db)):
+    """Аутентификация пользователя через Telegram с выдачей JWT токенов"""
+    try:
+        auth_service = AuthService(db)
+        
+        # Извлекаем Telegram ID
+        telegram_id = str(telegram_data.user.id)
+        
+        # Аутентифицируем пользователя
+        auth_result = auth_service.authenticate_user(telegram_id)
+        
+        logger.info(f"Пользователь успешно аутентифицирован: {telegram_id}")
+        return {
+            "success": True,
+            "message": "Успешная аутентификация",
+            **auth_result
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Ошибка аутентификации: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка аутентификации"
+        )
+
+@router.post('/refresh')
+async def refresh_tokens(refresh_token: str, db: Session = Depends(get_db)):
+    """Обновление JWT токенов по refresh токену"""
+    try:
+        auth_service = AuthService(db)
+        
+        # Обновляем токены
+        auth_result = auth_service.refresh_tokens(refresh_token)
+        
+        logger.info("Токены успешно обновлены")
+        return {
+            "success": True,
+            "message": "Токены обновлены",
+            **auth_result
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Ошибка обновления токенов: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка обновления токенов"
+        )
+
+@router.post('/logout')
+async def logout_user(current_user: User = Depends(require_auth)):
+    """Выход пользователя из системы"""
+    try:
+        # В реальной системе здесь можно добавить токен в черный список
+        logger.info(f"Пользователь {current_user.telegram_id} вышел из системы")
+        
+        return {
+            "success": True,
+            "message": "Успешный выход из системы"
+        }
+        
+    except Exception as e:
+        logger.error(f"Ошибка выхода из системы: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка выхода из системы"
+        )
+
+@router.get('/me')
+async def get_current_user_info(current_user: User = Depends(require_auth)):
+    """Получение информации о текущем пользователе"""
+    try:
+        return {
+            "success": True,
+            "user": UserRead.from_orm(current_user)
+        }
+        
+    except Exception as e:
+        logger.error(f"Ошибка получения информации о пользователе: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка получения информации о пользователе"
+        ) 

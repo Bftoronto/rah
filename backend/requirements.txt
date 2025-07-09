@@ -12,4 +12,10 @@ aiofiles==23.2.1
 Pillow==10.1.0
 requests==2.31.0
 aiohttp==3.9.1
-psutil==5.9.6 
+psutil==5.9.6
+
+# JWT авторизация
+PyJWT==2.8.0
+
+# Redis для кэширования и rate limiting
+redis==5.0.1

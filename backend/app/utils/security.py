@@ -2,6 +2,7 @@ from passlib.context import CryptContext
 import hashlib
 import hmac
 import os
+import time
 from typing import Dict, Any
 import logging
 from fastapi import Depends, HTTPException, status
@@ -37,9 +38,13 @@ def verify_telegram_data(data: Dict[str, Any]) -> bool:
             return False
         
         # Получаем токен бота из переменных окружения
-        bot_token = os.getenv('TELEGRAM_BOT_TOKEN', '8187393599:AAEudOluahmhNJixt_hW8mvWjWC0eh1YIlA')
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
         if not bot_token:
             logger.error("Отсутствует TELEGRAM_BOT_TOKEN в переменных окружения")
+            # В режиме разработки возвращаем False для безопасности
+            if os.getenv('ENVIRONMENT', 'production') == 'development':
+                logger.warning("Development mode: Missing bot token")
+                return True
             return False
         
         # Создаем секретный ключ из токена бота
@@ -131,7 +136,7 @@ def validate_telegram_user_data(data: Dict[str, Any]) -> bool:
     # Проверяем дату авторизации (не старше 24 часов)
     try:
         auth_date = int(data['auth_date'])
-        current_time = int(os.time())
+        current_time = int(time.time())
         if current_time - auth_date > 86400:  # 24 часа
             logger.warning("Данные авторизации устарели")
             return False

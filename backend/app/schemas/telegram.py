@@ -51,4 +51,28 @@ class TelegramVerificationRequest(BaseModel):
         if current_time - v.user.auth_date > 86400:
             raise ValueError('Данные авторизации устарели (старше 24 часов)')
         
+        return v
+
+class TelegramAuthRequest(BaseModel):
+    """Схема для совместимости с фронтендом"""
+    user: TelegramUserData = Field(..., description="Данные пользователя")
+    auth_date: Optional[int] = Field(None, description="Дата авторизации")
+    hash: Optional[str] = Field(None, max_length=128, description="Подпись данных")
+    initData: Optional[str] = Field(None, description="Инициализационные данные")
+    query_id: Optional[str] = Field(None, max_length=64, description="ID запроса")
+    start_param: Optional[str] = Field(None, max_length=64, description="Параметр запуска")
+    
+    class Config:
+        extra = "allow"  # Разрешаем дополнительные поля для совместимости
+    
+    @validator('auth_date')
+    def validate_auth_date(cls, v):
+        if v is not None:
+            current_time = int(datetime.now().timestamp())
+            if v > current_time:
+                raise ValueError('Дата авторизации не может быть в будущем')
+            
+            # Проверяем, что данные не старше 24 часов
+            if current_time - v > 86400:
+                raise ValueError('Данные авторизации устарели (старше 24 часов)')
         return v 

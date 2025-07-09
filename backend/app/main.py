@@ -10,6 +10,7 @@ from .config.settings import get_settings, settings
 from .database import init_db, check_db_connection
 from .api import auth, rides, profile, chat, upload, notifications, moderation, rating
 from .middleware.performance import PerformanceMiddleware, MemoryMonitor
+from .middleware.rate_limit import rate_limit_middleware
 from .utils.logger import get_logger, performance_logger
 from .monitoring.metrics import metrics_collector, api_metrics
 
@@ -27,6 +28,9 @@ app = FastAPI(
 
 # Добавляем middleware производительности
 app.add_middleware(PerformanceMiddleware)
+
+# Добавляем rate limiting middleware
+app.middleware("http")(rate_limit_middleware)
 
 # Настройка CORS для Telegram Web App
 app.add_middleware(
@@ -78,7 +82,7 @@ async def health_check():
 # Подключение роутеров
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(rides.router, prefix="/api/rides", tags=["rides"])
-app.include_router(profile.router, prefix="/api/user", tags=["user"])
+app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(upload.router, prefix="/api/upload", tags=["upload"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])

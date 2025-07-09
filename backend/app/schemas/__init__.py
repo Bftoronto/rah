@@ -6,7 +6,7 @@ from .rating import RatingCreate, RatingUpdate, RatingRead
 from .notification import NotificationCreate, NotificationUpdate, NotificationRead
 from .moderation import ReportCreate, ReportUpdate, ReportRead
 from .upload import UploadResponse
-from .telegram import TelegramUserData, TelegramWebAppData, TelegramVerificationRequest
+from .telegram import TelegramUserData, TelegramWebAppData, TelegramVerificationRequest, TelegramAuthRequest
 
 __all__ = [
     "UserCreate", "UserUpdate", "UserRead", "PrivacyPolicyAccept",
@@ -16,5 +16,5 @@ __all__ = [
     "NotificationCreate", "NotificationUpdate", "NotificationRead",
     "ReportCreate", "ReportUpdate", "ReportRead",
     "UploadResponse",
-    "TelegramUserData", "TelegramWebAppData", "TelegramVerificationRequest"
+    "TelegramUserData", "TelegramWebAppData", "TelegramVerificationRequest", "TelegramAuthRequest"
 ] 

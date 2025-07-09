@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 
 class UploadBase(BaseModel):
     user_id: int
@@ -16,5 +17,17 @@ class UploadRead(UploadBase):
     class Config:
         from_attributes = True
 
+class UploadResponse(BaseModel):
+    """Схема ответа для загрузки файлов"""
+    success: bool
+    file_url: str
+    file_type: str
+    original_filename: Optional[str] = None
+    file_size: Optional[int] = None
+    message: str
+    
+    class Config:
+        from_attributes = True
+
 # Alias for backward compatibility
-UploadResponse = UploadRead 
+UploadResponseLegacy = UploadRead 
