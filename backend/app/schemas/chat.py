@@ -8,6 +8,9 @@ class ChatMessageBase(BaseModel):
 class ChatMessageCreate(ChatMessageBase):
     pass
 
+class ChatMessageUpdate(ChatMessageBase):
+    pass
+
 class ChatMessageRead(ChatMessageBase):
     id: int
     chat_id: int
@@ -20,12 +23,20 @@ class ChatMessageRead(ChatMessageBase):
     class Config:
         orm_mode = True
 
+# Alias for backward compatibility
+MessageCreate = ChatMessageCreate
+MessageUpdate = ChatMessageUpdate
+MessageRead = ChatMessageRead
+
 class ChatBase(BaseModel):
     ride_id: int
     user1_id: int
     user2_id: int
 
 class ChatCreate(ChatBase):
+    pass
+
+class ChatUpdate(ChatBase):
     pass
 
 class ChatRead(ChatBase):

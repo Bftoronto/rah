@@ -157,4 +157,8 @@ class BulkActionRequest(BaseModel):
         allowed_actions = ['warn', 'suspend', 'ban', 'hide', 'delete', 'dismiss']
         if v not in allowed_actions:
             raise ValueError(f"Неподдерживаемое действие: {v}")
-        return v 
+        return v
+
+# Aliases for backward compatibility
+ReportRead = ReportResponse
+ReportUpdate = ReportCreate 

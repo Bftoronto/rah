@@ -14,4 +14,7 @@ class UploadRead(UploadBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True 
+        orm_mode = True
+
+# Alias for backward compatibility
+UploadResponse = UploadRead 

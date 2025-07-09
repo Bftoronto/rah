@@ -37,6 +37,9 @@ class RatingResponse(RatingBase):
     class Config:
         from_attributes = True
 
+# Alias for backward compatibility
+RatingRead = RatingResponse
+
 class ReviewBase(BaseModel):
     text: str = Field(..., min_length=10, max_length=2000, description="Текст отзыва")
     is_positive: bool = Field(..., description="Положительный или отрицательный отзыв")

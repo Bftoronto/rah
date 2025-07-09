@@ -227,6 +227,27 @@ systemctl restart pax-backend
 
 Подробная инструкция: [CONFIG_IMPORTS_FIX_INSTRUCTIONS.md](CONFIG_IMPORTS_FIX_INSTRUCTIONS.md)
 
+### Проблема с импортами схем чата
+
+Если приложение не запускается с ошибкой:
+```
+ImportError: cannot import name 'ChatUpdate' from 'app.schemas.chat'
+```
+
+**Решение:**
+```bash
+# Автоматическое исправление
+./fix_chat_schema_imports.sh <server_ip> [ssh_key_path]
+
+# Или ручное исправление
+ssh root@<server_ip>
+cd /opt/pax-app/backend
+# Добавить недостающие классы в app/schemas/chat.py
+systemctl restart pax-backend
+```
+
+Подробная инструкция: [CHAT_SCHEMA_FIX_INSTRUCTIONS.md](CHAT_SCHEMA_FIX_INSTRUCTIONS.md)
+
 ## 🔒 Готовность к продакшену
 
 ### v6.2 - Полная подготовка к продакшену

@@ -97,4 +97,8 @@ class NotificationLog(BaseModel):
     sent_at: datetime
     success: bool
     error_message: Optional[str] = None
-    telegram_response: Optional[Dict[str, Any]] = None 
+    telegram_response: Optional[Dict[str, Any]] = None
+
+# Aliases for backward compatibility
+NotificationRead = NotificationResponse
+NotificationUpdate = NotificationCreate 
