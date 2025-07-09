@@ -107,8 +107,8 @@ def check_network_connectivity():
 def check_alternative_database_urls():
     """Проверка альтернативных URL базы данных"""
     alternative_urls = [
-        "postgresql://paxmain_user:IUwzoIuzbKG9RuruiHSxBFTllTwaK4DN@dpg-d1lu8jnfte5s73dv6780-a.oregon-postgres.render.com/paxmain",
-        "postgresql://paxmain_user:IUwzoIuzbKG9RuruiHSxBFTllTwaK4DN@dpg-d1lu8jnfte5s73dv6780-a.oregon-postgres.render.com:5432/paxmain",
+        "postgresql://paxmain_user:IUwzoIuzbKG9RuruiHSxBFTllTwaK4DN@dpg-d1lu8jnfte5s73dv6780-a/paxmain",
+        "postgresql://paxmain_user:IUwzoIuzbKG9RuruiHSxBFTllTwaK4DN@dpg-d1lu8jnfte5s73dv6780-a:5432/paxmain",
         "postgresql://paxmain_user:IUwzoIuzbKG9RuruiHSxBFTllTwaK4DN@dpg-d1lu8jnfte5s73dv6780-a/paxmain?sslmode=require"
     ]
     

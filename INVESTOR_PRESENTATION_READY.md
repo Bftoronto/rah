@@ -40,7 +40,7 @@
 
 2. **Проблемы с подключением к базе данных**
    - ✅ Обновлен URL базы данных
-   - ✅ Исправлен хост: `dpg-d1lu8jnfte5s73dv6780-a.oregon-postgres.render.com`
+   - ✅ Исправлен хост: `dpg-d1lu8jnfte5s73dv6780-a`
    - ✅ Проверено подключение
 
 3. **Конфигурация системы**
@@ -88,7 +88,7 @@ URL: https://pax-backend-2gng.onrender.com
 
 ### Database (Render PostgreSQL)
 ```
-URL: postgresql://paxmain_user:IUwzoIuzbKG9RuruiHSxBFTllTwaK4DN@dpg-d1lu8jnfte5s73dv6780-a.oregon-postgres.render.com/paxmain
+URL: postgresql://paxmain_user:IUwzoIuzbKG9RuruiHSxBFTllTwaK4DN@dpg-d1lu8jnfte5s73dv6780-a/paxmain
 Статус: ✅ Подключена
 ```
 

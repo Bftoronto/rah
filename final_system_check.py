@@ -113,7 +113,7 @@ def check_database():
         import psycopg2
         from urllib.parse import urlparse
         
-        db_url = "postgresql://paxmain_user:IUwzoIuzbKG9RuruiHSxBFTllTwaK4DN@dpg-d1lu8jnfte5s73dv6780-a.oregon-postgres.render.com/paxmain"
+        db_url = "postgresql://paxmain_user:IUwzoIuzbKG9RuruiHSxBFTllTwaK4DN@dpg-d1lu8jnfte5s73dv6780-a/paxmain"
         parsed = urlparse(db_url)
         
         conn = psycopg2.connect(
