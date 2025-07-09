@@ -69,6 +69,13 @@ class ProfileScreen {
                             <span class="profile-car-plate-new">${user.car.plate}</span>
                         </div>
                     </div>
+                    <div class="profile-section-block" style="margin-top:18px;">
+                        <div class="profile-section-title">Способы оплаты</div>
+                        <div class="profile-section-text" aria-label="Способы оплаты">
+                            <span role="img" aria-label="наличные">💵</span> Наличный расчет <span style="color:#bbb;">|</span> <span role="img" aria-label="перевод на карту">💳</span> Перевод на карту<br>
+                            <span style="font-size:13px;color:#888;">Все расчеты осуществляются напрямую между пассажиром и водителем</span>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Контент таба "Документы" -->

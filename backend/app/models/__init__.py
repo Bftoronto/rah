@@ -2,7 +2,7 @@
 from .user import User, ProfileChangeLog
 from .ride import Ride
 from .chat import Chat, ChatMessage
-from .payment import Payment
+
 from .upload import Upload
 from .notification import NotificationLog, NotificationSettings
 from .moderation import ModerationReport, ModerationAction, ModerationRule, ContentFilter, TrustScore

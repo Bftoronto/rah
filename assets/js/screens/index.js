@@ -5,7 +5,7 @@ import ProfileScreen from './profile.js';
 import RideResultsScreen from './rideResults.js';
 import RideDetailsScreen from './rideDetails.js';
 import DriverProfileScreen from './driverProfile.js';
-import PaymentMethodScreen, { BankSelectionScreen, PaymentSuccessScreen } from './payment.js';
+
 import DateSelectionScreen, { TimeSelectionScreen } from './dateTimeSelection.js';
 import ChatScreen from './chat.js';
 import UploadAvatarScreen, { UploadCarPhotoScreen } from './upload.js';
@@ -43,9 +43,7 @@ const screens = {
     rideResults: RideResultsScreen,
     rideDetails: RideDetailsScreen,
     driverProfile: DriverProfileScreen,
-    paymentMethod: PaymentMethodScreen,
-    bankSelection: BankSelectionScreen,
-    paymentSuccess: PaymentSuccessScreen,
+
     dateSelection: DateSelectionScreen,
     timeSelection: TimeSelectionScreen,
     chatScreen: ChatScreen,

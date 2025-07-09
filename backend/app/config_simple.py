@@ -54,9 +54,7 @@ class SimpleSettings:
     smtp_password: Optional[str] = None
     smtp_use_tls: bool = True
     
-    # Платежи
-    payment_gateway_url: Optional[str] = None
-    payment_gateway_key: Optional[str] = None
+
 
 # Создание экземпляра настроек
 settings = SimpleSettings()

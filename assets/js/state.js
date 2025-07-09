@@ -26,7 +26,6 @@ export class StateManager {
                 cancelledRides: 0
             },
             rides: [],
-            paymentAmount: 500,
             selectedDate: null,
             selectedTime: null,
             selectedRide: null,
@@ -152,7 +151,6 @@ export class StateManager {
                 cancelledRides: 0
             },
             rides: [],
-            paymentAmount: 500,
             selectedDate: null,
             selectedTime: null,
             selectedRide: null,

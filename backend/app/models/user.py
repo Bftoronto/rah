@@ -60,8 +60,7 @@ class User(Base):
     reviews_given = relationship("Review", foreign_keys="Review.from_user_id", back_populates="from_user")
     reviews_received = relationship("Review", foreign_keys="Review.target_user_id", back_populates="target_user")
     
-    # Отношения для платежей
-    payments = relationship("Payment", back_populates="user")
+
     
     # Индексы для улучшения производительности
     __table_args__ = (

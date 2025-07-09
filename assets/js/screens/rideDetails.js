@@ -46,6 +46,9 @@ class RideDetailsScreen {
                     </div>
                     <div class="ride-price">${selectedRide.price} ₽</div>
                 </div>
+                <div class="ride-payment-info" aria-label="Способы оплаты" style="margin-top:8px;font-size:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <span role="img" aria-label="наличные">💵</span> Наличный расчет <span style="color:#bbb;">|</span> <span role="img" aria-label="перевод на карту">💳</span> Перевод на карту
+                </div>
             </div>
             
             <div class="card mt-20">
@@ -86,6 +89,10 @@ class RideDetailsScreen {
             <button class="btn btn-outline mt-10" id="openChatBtn">
                 <i class="fas fa-comments"></i> Написать водителю
             </button>
+            <div class="ride-payment-info" aria-label="Способы оплаты" style="margin-top:16px;font-size:15px;text-align:center;">
+                <span role="img" aria-label="наличные">💵</span> Наличный расчет <span style="color:#bbb;">|</span> <span role="img" aria-label="перевод на карту">💳</span> Перевод на карту<br>
+                <span style="font-size:13px;color:#888;">Все расчеты осуществляются напрямую между пассажиром и водителем</span>
+            </div>
         `;
     }
 

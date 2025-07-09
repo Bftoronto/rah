@@ -135,9 +135,7 @@ class Router {
                 'rideResults': 'Результаты поиска',
                 'rideDetails': 'Детали поездки',
                 'driverProfile': 'Профиль водителя',
-                'paymentMethod': 'Способ оплаты',
-                'bankSelection': 'Выбор банка',
-                'paymentSuccess': 'Успешная оплата',
+
                 'profile': 'Профиль',
                 'myRides': 'Мои поездки',
                 'createRide': 'Создать поездку',

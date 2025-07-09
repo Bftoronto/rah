@@ -7,7 +7,7 @@ import sys
 
 from .config_simple import settings
 from .database import init_db, check_db_connection
-from .api import auth, rides, profile, chat, payment, upload, notifications, moderation, rating
+from .api import auth, rides, profile, chat, upload, notifications, moderation, rating
 
 # Настройка логирования
 logging.basicConfig(
@@ -52,7 +52,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(rides.router, prefix="/api/rides", tags=["rides"])
 app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
-app.include_router(payment.router, prefix="/api/payment", tags=["payment"])
+
 app.include_router(upload.router, prefix="/api/upload", tags=["upload"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
 app.include_router(moderation.router, prefix="/api/moderation", tags=["moderation"])
@@ -132,7 +132,7 @@ async def api_info():
             "rides": "/api/rides",
             "profile": "/api/profile",
             "chat": "/api/chat",
-            "payment": "/api/payment",
+
             "upload": "/api/upload",
             "notifications": "/api/notifications",
             "moderation": "/api/moderation",

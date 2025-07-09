@@ -89,10 +89,7 @@ export const API = {
         return this.request('/rides', { method: 'POST', body: JSON.stringify(rideData) });
     },
     
-    // Обработка платежа
-    async processPayment(amount, method) {
-        return this.request('/payment/pay', { method: 'POST', body: JSON.stringify({ amount, method }) });
-    },
+
     
     // Получение моих поездок
     async getMyRides() {

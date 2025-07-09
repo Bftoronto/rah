@@ -23,4 +23,4 @@ class Ride(Base):
     ratings = relationship("Rating", back_populates="ride")
     reviews = relationship("Review", back_populates="ride")
     chats = relationship("Chat", back_populates="ride")
-    payments = relationship("Payment", back_populates="ride") 
+ 

@@ -67,6 +67,9 @@ class MyRidesScreen {
                             </div>
                             <div class="ride-price">${ride.price} ₽</div>
                         </div>
+                        <div class="ride-payment-info" aria-label="Способы оплаты" style="margin-top:4px;font-size:14px;">
+                            <span role="img" aria-label="наличные">💵</span> Наличный расчет <span style="color:#bbb;">|</span> <span role="img" aria-label="перевод на карту">💳</span> Перевод на карту
+                        </div>
                         
                         ${ride.passengers.length > 0 ? `
                             <div class="card-body">
