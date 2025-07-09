@@ -1,0 +1,41 @@
+# Основные зависимости
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+sqlalchemy==2.0.23
+alembic==1.12.1
+psycopg2-binary==2.9.9
+python-multipart==0.0.6
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+aiofiles==23.2.1
+python-telegram-bot==20.7
+aiohttp==3.9.1
+Pillow==10.1.0
+
+# Новые зависимости для улучшений
+psutil==5.9.6
+pydantic[email]==2.5.0
+email-validator==2.1.0
+
+# Зависимости для мониторинга и логирования
+structlog==23.2.0
+python-json-logger==2.0.7
+
+# Зависимости для безопасности
+cryptography==41.0.8
+bcrypt==4.1.2
+
+# Зависимости для тестирования
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2
+
+# Зависимости для документации
+mkdocs==1.5.3
+mkdocs-material==9.4.8
+
+# Зависимости для разработки
+black==23.11.0
+isort==5.12.0
+flake8==6.1.0
+mypy==1.7.1 

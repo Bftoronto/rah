@@ -1,7 +1,6 @@
 import os
-import json
 from typing import List, Optional
-from pydantic import Field, validator
+from pydantic import Field
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -10,28 +9,13 @@ class Settings(BaseSettings):
     
     # Основная информация
     app_name: str = Field(default="Pax Backend", env="APP_NAME")
-    version: str = Field(default="1.0.0", env="VERSION")
+    version: str = Field(default="1.0.0", env="APP_VERSION")
     debug: bool = Field(default=False, env="DEBUG")
     environment: str = Field(default="production", env="ENVIRONMENT")
     
     # API настройки
     api_prefix: str = Field(default="/api", env="API_PREFIX")
-    cors_origins: List[str] = Field(default=["*"], env="CORS_ORIGINS")
-    
-    @validator('cors_origins', pre=True)
-    def parse_cors_origins(cls, v):
-        """Парсинг CORS origins с fallback"""
-        if isinstance(v, str):
-            try:
-                # Пытаемся парсить как JSON
-                return json.loads(v)
-            except (json.JSONDecodeError, TypeError):
-                # Если не JSON, разделяем по запятой
-                return [origin.strip() for origin in v.split(',') if origin.strip()]
-        elif isinstance(v, list):
-            return v
-        else:
-            return ["*"]  # Fallback на разрешение всех origins
+    cors_origins: List[str] = Field(default=[], env="CORS_ORIGINS")
     
     # Логирование
     log_level: str = Field(default="INFO", env="LOG_LEVEL")
@@ -50,13 +34,11 @@ class Settings(BaseSettings):
     
     # Telegram
     telegram_bot_token: str = Field(env="TELEGRAM_BOT_TOKEN")
-    telegram_bot_username: Optional[str] = Field(default=None, env="TELEGRAM_BOT_USERNAME")
     telegram_webhook_url: Optional[str] = Field(default=None, env="TELEGRAM_WEBHOOK_URL")
     
     # Файлы
     upload_dir: str = Field(default="uploads", env="UPLOAD_DIR")
     max_file_size: int = Field(default=10 * 1024 * 1024, env="MAX_FILE_SIZE")  # 10MB
-    allowed_file_types: Optional[str] = Field(default="image/jpeg,image/png,image/gif", env="ALLOWED_FILE_TYPES")
     
     # Мониторинг
     enable_metrics: bool = Field(default=True, env="ENABLE_METRICS")
@@ -77,7 +59,6 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
-        extra = "ignore"  # Игнорировать дополнительные поля
 
 @lru_cache()
 def get_settings() -> Settings:
