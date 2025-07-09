@@ -23,15 +23,15 @@ async def verify_telegram_user(request: Request, db: Session = Depends(get_db)):
         # Верифицируем данные Telegram
         if not verify_telegram_data(telegram_data):
             logger.warning("Telegram data verification failed")
-            # В режиме отладки продолжаем без верификации
-            if not settings.debug:
+            # В режиме разработки продолжаем без верификации
+            if os.getenv('ENVIRONMENT', 'production') != 'development':
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Неверная подпись Telegram"
                 )
         
-        # Извлекаем данные пользователя
-        user_data = extract_telegram_user_data(telegram_data)
+        # Извлекаем данные пользователя из user объекта
+        user_data = extract_telegram_user_data(telegram_data.get('user', telegram_data))
         telegram_id = str(user_data['id'])
         
         # Ищем пользователя в базе

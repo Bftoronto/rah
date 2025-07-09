@@ -134,8 +134,8 @@ class App {
                 console.log('Telegram WebApp data:', telegramInitData);
                 
                 if (telegramInitData && telegramInitData.user && telegramInitData.user.id) {
-                    // Передаем данные пользователя из Telegram
-                    const verificationResult = await API.verifyTelegramUser(telegramInitData.user);
+                    // Передаем полные данные Telegram с подписью для верификации
+                    const verificationResult = await API.verifyTelegramUser(telegramInitData);
                     if (verificationResult.exists) {
                         const user = verificationResult.user;
                         stateManager.updateUserData(user);

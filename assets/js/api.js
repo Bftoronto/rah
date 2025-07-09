@@ -7,6 +7,11 @@ const API_CONFIG = {
         baseURL: 'http://localhost:8000',
         timeout: 10000
     },
+    // Локальная разработка с бэкендом
+    local: {
+        baseURL: 'http://localhost:8000',
+        timeout: 10000
+    },
     // Продакшен (Render)
     production: {
         baseURL: 'https://pax-backend-2gng.onrender.com',
@@ -22,7 +27,7 @@ const API_CONFIG = {
 // Определение окружения
 const getEnvironment = () => {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return 'development';
+        return 'local';
     } else if (window.location.hostname === 'rah.pages.dev' || window.location.hostname === 'frabjous-florentine-c506b0.netlify.app') {
         return 'production';
     } else if (window.Telegram && window.Telegram.WebApp) {

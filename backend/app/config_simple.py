@@ -1,6 +1,5 @@
 import os
 import logging
-from pydantic_settings import BaseSettings
 from typing import Optional, List
 
 # Настройка логирования
@@ -10,21 +9,23 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-class Settings(BaseSettings):
+class SimpleSettings:
+    """Упрощенные настройки без проблемных переменных окружения"""
+    
     # Основные настройки
     app_name: str = "Ride Sharing API"
     version: str = "1.0.0"
-    debug: bool = False
+    debug: bool = True
     
     # База данных
     database_url: str = "postgresql://paxmain_user:IUwzoIuzbKG9RuruiHSxBFTllTwaK4DN@dpg-d1lu8jnfte5s73dv6780-a/paxmain"
     
     # Telegram Bot
-    telegram_bot_token: Optional[str] = None
-    telegram_bot_username: Optional[str] = None
+    telegram_bot_token: str = "8187393599:AAEudOluahmhNJixt_hW8mvWjWC0eh1YIlA"
+    telegram_bot_username: str = "paxdemobot"
     
     # Безопасность
-    secret_key: str = "SECRET_KEY=8f3b2c1e-4a5d-11ee-be56-0242ac120002"
+    secret_key: str = "8f3b2c1e-4a5d-11ee-be56-0242ac120002"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     
@@ -36,12 +37,12 @@ class Settings(BaseSettings):
     # CORS
     cors_origins: List[str] = ["*"]
     
-    # Переменные окружения для разработки
-    environment: str = "production"
-    
     # Логирование
     log_level: str = "INFO"
     log_file: Optional[str] = None
+    
+    # Переменные окружения для разработки
+    environment: str = "development"
     
     # Redis (для кэширования и сессий)
     redis_url: Optional[str] = None
@@ -56,22 +57,15 @@ class Settings(BaseSettings):
     # Платежи
     payment_gateway_url: Optional[str] = None
     payment_gateway_key: Optional[str] = None
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
-        # Игнорируем проблемные переменные окружения
-        extra = "ignore"
 
 # Создание экземпляра настроек
-settings = Settings()
+settings = SimpleSettings()
 
 # Проверка обязательных переменных окружения
 def validate_settings():
     """Проверка обязательных настроек"""
     required_settings = [
         "database_url"
-        # "telegram_bot_token" - делаем необязательным для тестирования
     ]
     
     missing_settings = []

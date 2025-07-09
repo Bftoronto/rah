@@ -5,7 +5,7 @@ import logging
 import os
 import sys
 
-from .config import settings
+from .config_simple import settings
 from .database import init_db, check_db_connection
 from .api import auth, rides, profile, chat, payment, upload, notifications, moderation, rating
 

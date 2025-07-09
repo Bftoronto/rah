@@ -21,10 +21,19 @@ def verify_telegram_data(data: Dict[str, Any]) -> bool:
     Верификация данных от Telegram Web App
     """
     try:
+        # Проверяем, что данные содержат user объект
+        if 'user' not in data:
+            logger.warning("Отсутствует объект user в данных Telegram")
+            return False
+        
         # Получаем подпись из данных
         hash_str = data.get('hash', '')
         if not hash_str:
             logger.warning("Отсутствует подпись в данных Telegram")
+            # В режиме разработки разрешаем без подписи
+            if os.getenv('ENVIRONMENT', 'production') == 'development':
+                logger.warning("Development mode: Allowing unverified Telegram data")
+                return True
             return False
         
         # Получаем токен бота из переменных окружения
@@ -57,7 +66,7 @@ def verify_telegram_data(data: Dict[str, Any]) -> bool:
         ).hexdigest()
         
         # Для отладки
-        logger.info(f"Telegram data: {data}")
+        logger.info(f"Telegram data keys: {list(data.keys())}")
         logger.info(f"Calculated hash: {calculated_hash}")
         logger.info(f"Received hash: {hash_str}")
         
@@ -68,8 +77,8 @@ def verify_telegram_data(data: Dict[str, Any]) -> bool:
         if not is_valid:
             logger.warning(f"Hash verification failed. Expected: {calculated_hash}, Got: {hash_str}")
             # Временно разрешаем для тестирования
-            if os.getenv('DEBUG', 'false').lower() == 'true':
-                logger.warning("DEBUG mode: Allowing unverified Telegram data")
+            if os.getenv('ENVIRONMENT', 'production') == 'development':
+                logger.warning("Development mode: Allowing unverified Telegram data")
                 return True
         
         return is_valid
