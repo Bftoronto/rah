@@ -159,6 +159,12 @@ echo "🔧 Применение миграций..."
 source venv/bin/activate
 alembic upgrade head
 
+echo "🔧 Исправление импортов конфигурации..."
+# Исправление импортов config_simple
+sed -i 's/from \.config_simple import settings/from .config.settings import settings/' app/database.py 2>/dev/null || true
+sed -i 's/from \.\.config_simple import settings/from ..config.settings import settings/' app/services/notification_service.py 2>/dev/null || true
+sed -i 's/from \.\.config_simple import settings/from ..config.settings import settings/' app/services/moderation_service.py 2>/dev/null || true
+
 echo "🔧 Настройка systemd сервиса..."
 cat > /etc/systemd/system/pax-backend.service << 'SERVICE'
 [Unit]

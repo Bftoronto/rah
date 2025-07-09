@@ -204,6 +204,29 @@ systemctl restart pax-backend
 
 Подробная инструкция: [PYDANTIC_FIX_INSTRUCTIONS.md](PYDANTIC_FIX_INSTRUCTIONS.md)
 
+### Проблема с импортами конфигурации
+
+Если приложение не запускается с ошибкой:
+```
+ModuleNotFoundError: No module named 'app.config_simple'
+```
+
+**Решение:**
+```bash
+# Автоматическое исправление
+./fix_config_imports.sh <server_ip> [ssh_key_path]
+
+# Или ручное исправление
+ssh root@<server_ip>
+cd /opt/pax-app/backend
+sed -i 's/from \.config_simple import settings/from .config.settings import settings/' app/database.py
+sed -i 's/from \.\.config_simple import settings/from ..config.settings import settings/' app/services/notification_service.py
+sed -i 's/from \.\.config_simple import settings/from ..config.settings import settings/' app/services/moderation_service.py
+systemctl restart pax-backend
+```
+
+Подробная инструкция: [CONFIG_IMPORTS_FIX_INSTRUCTIONS.md](CONFIG_IMPORTS_FIX_INSTRUCTIONS.md)
+
 ## 🔒 Готовность к продакшену
 
 ### v6.2 - Полная подготовка к продакшену
