@@ -383,9 +383,8 @@ class CreateRideScreen {
                 fromInput.addEventListener('input', (e) => {
                     this.state.from = e.target.value;
                     this.saveAndRerender(false);
-                    // Автодополнение (заглушка)
-                    const suggestions = ['Калининград','Киров','Кисловодск','Краснодар','Красноярск'];
-                    this.showSuggestions('fromSuggestions', suggestions, e.target.value, (val) => {
+                    // Улучшенное автодополнение
+                    this.showSuggestions('fromSuggestions', [], e.target.value, (val) => {
                         this.state.from = val;
                         this.saveAndRerender();
                     });
@@ -399,9 +398,8 @@ class CreateRideScreen {
                 toInput.addEventListener('input', (e) => {
                     this.state.to = e.target.value;
                     this.saveAndRerender(false);
-                    // Автодополнение (заглушка)
-                    const suggestions = ['Сочи, ул. Ленина','Сочи, ул. Ленина, д. 1','Сочи, ул. Ленина, д. 15','Сочи, ул. Ленина, д. 2','Сочи, ул. Ленина, д. 39','Сочи, ул. Ленина, д. 55'];
-                    this.showSuggestions('toSuggestions', suggestions, e.target.value, (val) => {
+                    // Улучшенное автодополнение
+                    this.showSuggestions('toSuggestions', [], e.target.value, (val) => {
                         this.state.to = val;
                         this.saveAndRerender();
                     });
@@ -468,15 +466,107 @@ class CreateRideScreen {
         const container = document.getElementById(containerId);
         if (!container) return;
         container.innerHTML = '';
-        if (!value) return;
-        const filtered = suggestions.filter(s => s.toLowerCase().startsWith(value.toLowerCase()));
-        filtered.forEach(s => {
-            const div = document.createElement('div');
-            div.className = 'suggestion-item';
-            div.textContent = s;
-            div.addEventListener('click', () => onSelect(s));
-            container.appendChild(div);
+        if (!value || value.length < 2) return;
+        
+        // Получаем подходящие адреса из API или кэша
+        this.getAddressSuggestions(value, containerId).then(suggestions => {
+            const filtered = suggestions.filter(s => 
+                s.toLowerCase().includes(value.toLowerCase())
+            ).slice(0, 5); // Ограничиваем 5 результатами
+            
+            filtered.forEach(s => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                div.textContent = s;
+                div.addEventListener('click', () => onSelect(s));
+                container.appendChild(div);
+            });
+        }).catch(error => {
+            console.warn('Ошибка получения автодополнения:', error);
+            // Fallback к статическим данным
+            const fallbackSuggestions = this.getFallbackSuggestions(containerId);
+            const filtered = fallbackSuggestions.filter(s => 
+                s.toLowerCase().includes(value.toLowerCase())
+            ).slice(0, 5);
+            
+            filtered.forEach(s => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                div.textContent = s;
+                div.addEventListener('click', () => onSelect(s));
+                container.appendChild(div);
+            });
         });
+    }
+    
+    async getAddressSuggestions(query, type) {
+        try {
+            // Кэшируем результаты для улучшения производительности
+            const cacheKey = `address_suggestions_${type}_${query}`;
+            const cached = sessionStorage.getItem(cacheKey);
+            
+            if (cached) {
+                const { data, timestamp } = JSON.parse(cached);
+                // Кэш действителен 5 минут
+                if (Date.now() - timestamp < 5 * 60 * 1000) {
+                    return data;
+                }
+            }
+            
+            // Запрос к API геокодирования
+            const response = await fetch(`https://api.example.com/geocode/suggest?q=${encodeURIComponent(query)}&type=${type}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            const suggestions = data.suggestions || [];
+            
+            // Сохраняем в кэш
+            sessionStorage.setItem(cacheKey, JSON.stringify({
+                data: suggestions,
+                timestamp: Date.now()
+            }));
+            
+            return suggestions;
+            
+        } catch (error) {
+            console.warn('Ошибка API автодополнения:', error);
+            throw error;
+        }
+    }
+    
+    getFallbackSuggestions(type) {
+        // Статические данные для fallback
+        const suggestions = {
+            fromSuggestions: [
+                'Москва, ул. Тверская',
+                'Москва, ул. Арбат',
+                'Москва, Красная площадь',
+                'Санкт-Петербург, Невский проспект',
+                'Санкт-Петербург, Дворцовая площадь',
+                'Казань, ул. Баумана',
+                'Екатеринбург, ул. Вайнера',
+                'Новосибирск, Красный проспект',
+                'Краснодар, ул. Красная',
+                'Сочи, ул. Ленина'
+            ],
+            toSuggestions: [
+                'Москва, ул. Тверская, д. 1',
+                'Москва, ул. Арбат, д. 15',
+                'Москва, Красная площадь, д. 1',
+                'Санкт-Петербург, Невский проспект, д. 28',
+                'Санкт-Петербург, Дворцовая площадь, д. 2',
+                'Казань, ул. Баумана, д. 10',
+                'Екатеринбург, ул. Вайнера, д. 5',
+                'Новосибирск, Красный проспект, д. 25',
+                'Краснодар, ул. Красная, д. 139',
+                'Сочи, ул. Ленина, д. 55'
+            ]
+        };
+        
+        return suggestions[type] || [];
     }
 
     saveAndRerender(rerender = true) {

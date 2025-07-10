@@ -129,33 +129,100 @@ class CacheManager {
     constructor() {
         this.cache = new Map();
         this.ttl = 5 * 60 * 1000; // 5 минут
+        this.maxSize = 100; // Максимальное количество элементов
+        this.stats = {
+            hits: 0,
+            misses: 0,
+            sets: 0,
+            deletes: 0
+        };
     }
 
     get(key) {
         const item = this.cache.get(key);
         if (item && Date.now() - item.timestamp < this.ttl) {
+            this.stats.hits++;
             return item.data;
         }
         this.cache.delete(key);
+        this.stats.misses++;
         return null;
     }
 
-    set(key, data) {
+    set(key, data, customTtl = null) {
+        // Очищаем старые записи если достигли лимита
+        if (this.cache.size >= this.maxSize) {
+            const oldestKey = this.cache.keys().next().value;
+            this.cache.delete(oldestKey);
+            this.stats.deletes++;
+        }
+        
         this.cache.set(key, {
             data,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            ttl: customTtl || this.ttl
         });
+        this.stats.sets++;
     }
 
     clear() {
         this.cache.clear();
+        this.stats = {
+            hits: 0,
+            misses: 0,
+            sets: 0,
+            deletes: 0
+        };
     }
 
     invalidate(pattern) {
+        let deletedCount = 0;
         for (const key of this.cache.keys()) {
             if (key.includes(pattern)) {
                 this.cache.delete(key);
+                deletedCount++;
             }
+        }
+        this.stats.deletes += deletedCount;
+    }
+
+    getStats() {
+        const totalRequests = this.stats.hits + this.stats.misses;
+        const hitRate = totalRequests > 0 ? (this.stats.hits / totalRequests) * 100 : 0;
+        
+        return {
+            size: this.cache.size,
+            maxSize: this.maxSize,
+            ttl: this.ttl,
+            hitRate: Math.round(hitRate),
+            hits: this.stats.hits,
+            misses: this.stats.misses,
+            sets: this.stats.sets,
+            deletes: this.stats.deletes
+        };
+    }
+
+    // Очистка устаревших записей
+    cleanup() {
+        const now = Date.now();
+        let cleanedCount = 0;
+        
+        for (const [key, item] of this.cache.entries()) {
+            if (now - item.timestamp > item.ttl) {
+                this.cache.delete(key);
+                cleanedCount++;
+            }
+        }
+        
+        this.stats.deletes += cleanedCount;
+        return cleanedCount;
+    }
+
+    // Установка TTL для разных типов данных
+    setTTL(key, ttl) {
+        const item = this.cache.get(key);
+        if (item) {
+            item.ttl = ttl;
         }
     }
 }
@@ -188,7 +255,13 @@ export const API = {
         };
         
         try {
+            const startTime = Date.now();
             const response = await fetch(url, config);
+            
+            // Мониторинг API вызовов
+            if (window.performanceMonitor) {
+                window.performanceMonitor.trackApiCall(endpoint, options.method || 'GET', startTime);
+            }
             
             // Если получили 401, пытаемся обновить токен
             if (response.status === 401) {
@@ -249,19 +322,24 @@ export const API = {
     },
 
     // Логирование ошибок для мониторинга
-    logError(error) {
+    logError(error, context = '') {
         const errorLog = {
             timestamp: new Date().toISOString(),
             error: error.message,
             status: error.status,
             data: error.data,
+            context,
             url: window.location.href,
             userAgent: navigator.userAgent
         };
         
+        // Интеграция с системой мониторинга
+        if (window.performanceMonitor) {
+            window.performanceMonitor.trackError(error, context);
+        }
+        
         // В продакшене отправляем в систему мониторинга
         if (getEnvironment() === 'production') {
-            // Здесь можно добавить отправку в Sentry или другую систему
             console.error('Production error:', errorLog);
         }
     },
@@ -493,10 +571,71 @@ export const API = {
         }
     },
     
-    // Отправка уведомления (заглушка)
-    async sendNotification(title, message, type = 'info') {
-        Utils.showNotification(title, message, type);
-        return { success: true };
+    // Улучшенная система уведомлений
+    async sendNotification(title, message, type = 'info', options = {}) {
+        try {
+            // Отправляем уведомление на сервер для логирования
+            const notificationData = {
+                title,
+                message,
+                type,
+                user_id: this.getCurrentUserId(),
+                timestamp: new Date().toISOString(),
+                ...options
+            };
+            
+            // Асинхронно отправляем на сервер (не блокируем UI)
+            this.request('/api/notifications/log', {
+                method: 'POST',
+                body: JSON.stringify(notificationData)
+            }).catch(error => {
+                console.warn('Ошибка логирования уведомления:', error);
+            });
+            
+            // Показываем уведомление пользователю
+            Utils.showNotification(title, message, type);
+            
+            // Отправляем в Telegram если настроено
+            if (options.send_to_telegram && this.getCurrentUserId()) {
+                this.sendTelegramNotification(notificationData).catch(error => {
+                    console.warn('Ошибка отправки в Telegram:', error);
+                });
+            }
+            
+            return { success: true };
+        } catch (error) {
+            console.error('Ошибка отправки уведомления:', error);
+            // Fallback к локальному уведомлению
+            Utils.showNotification(title, message, type);
+            return { success: true };
+        }
+    },
+    
+    async sendTelegramNotification(notificationData) {
+        try {
+            const response = await this.request('/api/notifications/telegram', {
+                method: 'POST',
+                body: JSON.stringify(notificationData)
+            });
+            return response;
+        } catch (error) {
+            console.warn('Ошибка отправки в Telegram:', error);
+            throw error;
+        }
+    },
+    
+    getCurrentUserId() {
+        try {
+            const currentUser = localStorage.getItem('currentUser');
+            if (currentUser) {
+                const user = JSON.parse(currentUser);
+                return user.id || user.telegram_id;
+            }
+            return null;
+        } catch (error) {
+            console.warn('Ошибка получения user_id:', error);
+            return null;
+        }
     },
     
     // Обновление профиля пользователя

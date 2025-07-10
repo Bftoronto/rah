@@ -6,8 +6,10 @@ import time
 from typing import Dict, Any
 import logging
 from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 logger = logging.getLogger(__name__)
+security = HTTPBearer()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -148,7 +150,37 @@ def validate_telegram_user_data(data: Dict[str, Any]) -> bool:
 
 def get_current_user_id():
     """
-    Заглушка для получения текущего user_id через Depends.
-    В реальном проекте реализуй получение user_id из токена или сессии.
+    Получение текущего user_id из JWT токена.
+    Используется как зависимость для защищенных эндпоинтов.
     """
-    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Авторизация обязательна") 
+    def _get_user_id_from_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> int:
+        try:
+            from .jwt_auth import jwt_auth
+            
+            token = credentials.credentials
+            
+            # Верифицируем токен и получаем payload
+            payload = jwt_auth.verify_token(token, "access")
+            user_id = payload.get("user_id")
+            telegram_id = payload.get("telegram_id")
+            
+            if not user_id or not telegram_id:
+                logger.warning("Неверный формат токена в get_current_user_id")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Неверный формат токена"
+                )
+            
+            logger.debug(f"Извлечен user_id: {user_id} из токена")
+            return user_id
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Ошибка получения user_id из токена: {str(e)}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Ошибка авторизации"
+            )
+    
+    return _get_user_id_from_token 

@@ -1,11 +1,18 @@
 import re
 from datetime import datetime, date
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from ..schemas.user import UserCreate, UserUpdate
 from ..interfaces.auth import IValidator
 from ..utils.logger import get_logger, security_logger
 
 logger = get_logger("data_validator")
+
+class ValidationError(Exception):
+    """Кастомное исключение для ошибок валидации"""
+    def __init__(self, field: str, message: str):
+        self.field = field
+        self.message = message
+        super().__init__(message)
 
 class DataValidator(IValidator):
     """Валидатор данных с централизованной логикой проверки"""
@@ -16,6 +23,7 @@ class DataValidator(IValidator):
         self.email_pattern = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
         self.username_pattern = re.compile(r'^[a-zA-Z0-9_]{3,32}$')
         self.url_pattern = re.compile(r'^https?://.+')
+        self.time_pattern = re.compile(r'^([01]?[0-9]|2[0-3]):[0-5][0-9]$')
     
     def validate_telegram_data(self, data: Dict[str, Any]) -> bool:
         """Валидация данных Telegram"""
@@ -266,4 +274,103 @@ class DataValidator(IValidator):
             
         except Exception as e:
             logger.error(f"Ошибка валидации данных поездки: {str(e)}")
-            return False 
+            return False
+
+    def validate_phone(self, phone: str) -> str:
+        """Валидация номера телефона"""
+        phone_clean = re.sub(r'\D', '', phone)
+        if len(phone_clean) < 10:
+            raise ValidationError('phone', 'Номер телефона должен содержать минимум 10 цифр')
+        return phone_clean
+    
+    def validate_full_name(self, name: str) -> str:
+        """Валидация ФИО"""
+        name_clean = name.strip()
+        if len(name_clean) < 2:
+            raise ValidationError('full_name', 'ФИО должно содержать минимум 2 символа')
+        return name_clean
+    
+    def validate_birth_date(self, birth_date: date) -> date:
+        """Валидация даты рождения"""
+        today = date.today()
+        age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+        if age < 18:
+            raise ValidationError('birth_date', 'Пользователь должен быть старше 18 лет')
+        if age > 100:
+            raise ValidationError('birth_date', 'Некорректная дата рождения')
+        return birth_date
+    
+    def validate_rating(self, rating: int) -> int:
+        """Валидация рейтинга"""
+        if rating < 1 or rating > 5:
+            raise ValidationError('rating', 'Рейтинг должен быть от 1 до 5')
+        return rating
+    
+    def validate_file_size(self, file_size: int, max_size: int = 5 * 1024 * 1024) -> bool:
+        """Валидация размера файла"""
+        if file_size > max_size:
+            raise ValidationError('file_size', f'Размер файла превышает {max_size / (1024 * 1024)}MB')
+        return True
+    
+    def validate_file_type(self, content_type: str, allowed_types: List[str]) -> bool:
+        """Валидация типа файла"""
+        if content_type not in allowed_types:
+            raise ValidationError('file_type', f'Неподдерживаемый тип файла: {content_type}')
+        return True
+    
+    def validate_time_format(self, time_str: str) -> str:
+        """Валидация формата времени HH:MM"""
+        if not self.time_pattern.match(time_str):
+            raise ValidationError('time', 'Неверный формат времени. Используйте HH:MM')
+        return time_str
+    
+    def validate_notification_settings(self, settings: Dict[str, Any]) -> Dict[str, Any]:
+        """Валидация настроек уведомлений"""
+        validated_settings = {}
+        
+        # Валидация булевых полей
+        bool_fields = ['ride_notifications', 'system_notifications', 'reminder_notifications', 
+                      'marketing_notifications', 'email_notifications', 'push_notifications']
+        for field in bool_fields:
+            if field in settings:
+                if not isinstance(settings[field], bool):
+                    raise ValidationError(field, f'Поле {field} должно быть булевым значением')
+                validated_settings[field] = settings[field]
+        
+        # Валидация времени тишины
+        if 'quiet_hours_start' in settings and settings['quiet_hours_start']:
+            validated_settings['quiet_hours_start'] = self.validate_time_format(settings['quiet_hours_start'])
+        
+        if 'quiet_hours_end' in settings and settings['quiet_hours_end']:
+            validated_settings['quiet_hours_end'] = self.validate_time_format(settings['quiet_hours_end'])
+        
+        return validated_settings
+    
+    def sanitize_text(self, text: str, max_length: int = 1000) -> str:
+        """Санитизация текста"""
+        if not text:
+            return ""
+        
+        # Удаляем HTML теги
+        text = re.sub(r'<[^>]+>', '', text)
+        
+        # Удаляем лишние пробелы
+        text = re.sub(r'\s+', ' ', text).strip()
+        
+        # Обрезаем до максимальной длины
+        if len(text) > max_length:
+            text = text[:max_length]
+        
+        return text
+    
+    def validate_comment(self, comment: str, min_length: int = 10, max_length: int = 1000) -> str:
+        """Валидация комментария"""
+        if comment is None:
+            return ""
+        
+        comment_clean = self.sanitize_text(comment, max_length)
+        
+        if len(comment_clean.strip()) < min_length:
+            raise ValidationError('comment', f'Комментарий должен содержать минимум {min_length} символов')
+        
+        return comment_clean 

@@ -8,7 +8,7 @@ import time
 
 from .config.settings import get_settings, settings
 from .database import init_db, check_db_connection
-from .api import auth, rides, profile, chat, upload, notifications, moderation, rating
+from .api import auth, rides, profile, chat, upload, notifications, moderation, rating, monitoring
 from .middleware.performance import PerformanceMiddleware, MemoryMonitor
 from .middleware.rate_limit import rate_limit_middleware
 from .utils.logger import get_logger, performance_logger
@@ -88,6 +88,7 @@ app.include_router(upload.router, prefix="/api/upload", tags=["upload"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
 app.include_router(moderation.router, prefix="/api/moderation", tags=["moderation"])
 app.include_router(rating.router, prefix="/api/rating", tags=["rating"])
+app.include_router(monitoring.router, prefix="/api/monitoring", tags=["monitoring"])
 
 @app.on_event("startup")
 async def startup_event():

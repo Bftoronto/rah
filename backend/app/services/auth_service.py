@@ -13,6 +13,7 @@ from ..utils.jwt_auth import jwt_auth
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import selectinload
+from ..utils.error_handler import error_handler
 
 logger = get_logger("auth_service")
 security = HTTPBearer()
@@ -626,21 +627,54 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ) -> User:
-    """Получение текущего пользователя по токену"""
+    """Получение текущего пользователя по JWT токену"""
     try:
-        # Временная реализация для разработки - возвращаем первого пользователя
-        # TODO: Реализовать получение пользователя по JWT токену
-        user = db.query(User).first()
-        if not user:
+        # Извлекаем токен из заголовка
+        token = credentials.credentials
+        
+        # Верифицируем токен и получаем payload
+        payload = jwt_auth.verify_token(token, "access")
+        user_id = payload.get("user_id")
+        telegram_id = payload.get("telegram_id")
+        
+        if not user_id or not telegram_id:
+            logger.warning("Неверный формат токена")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Пользователь не найден"
+                detail="Неверный формат токена"
             )
+        
+        # Получаем пользователя из базы данных
+        user = db.query(User).filter(
+            User.id == user_id,
+            User.telegram_id == telegram_id,
+            User.is_active == True
+        ).first()
+        
+        if not user:
+            logger.warning(f"Пользователь {user_id} не найден или неактивен")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Пользователь не найден или неактивен"
+            )
+        
+        # Обновляем время последнего доступа
+        user.last_login_at = datetime.now()
+        db.commit()
+        
+        logger.info(f"Пользователь {user_id} успешно авторизован")
         return user
+        
     except HTTPException:
         raise
+    except jwt_auth.JWTError as e:
+        logger.warning(f"Ошибка JWT токена: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Неверный токен авторизации"
+        )
     except Exception as e:
-        logger.error(f"Ошибка получения текущего пользователя: {str(e)}")
+        logger.error(f"Ошибка получения текущего пользователя: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Ошибка авторизации"
