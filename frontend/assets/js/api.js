@@ -892,7 +892,7 @@ export const API = {
             });
 
             // Инвалидируем кэш рейтингов
-            cacheManager.invalidate('ratings');
+            this.cacheManager.invalidate('ratings');
             return response;
         } catch (error) {
             console.error('Ошибка создания рейтинга:', error);
@@ -916,7 +916,7 @@ export const API = {
             });
 
             // Инвалидируем кэш отзывов
-            cacheManager.invalidate('reviews');
+            this.cacheManager.invalidate('reviews');
             return response;
         } catch (error) {
             console.error('Ошибка создания отзыва:', error);
@@ -960,14 +960,14 @@ export const API = {
 
     async getUserRatingSummary(userId) {
         const cacheKey = `rating_summary_${userId}`;
-        const cached = cacheManager.get(cacheKey);
+        const cached = this.cacheManager.get(cacheKey);
         if (cached) return cached;
         
         try {
             const response = await this.request(`/api/rating/user/${userId}/summary`, {
                 method: 'GET'
             });
-            cacheManager.set(cacheKey, response);
+            this.cacheManager.set(cacheKey, response);
             return response;
         } catch (error) {
             console.error('Ошибка получения сводки рейтингов:', error);

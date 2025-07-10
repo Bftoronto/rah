@@ -1,4 +1,4 @@
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, Field
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
@@ -33,6 +33,10 @@ class ReportResponse(BaseModel):
     created_at: datetime
     resolved_at: Optional[datetime] = None
 
+    class Config:
+        from_attributes = True
+        populate_by_name = True
+
 class ActionCreate(BaseModel):
     action: str
     reason: Optional[str] = None
@@ -52,6 +56,10 @@ class ActionResponse(BaseModel):
     reason: Optional[str]
     created_at: datetime
 
+    class Config:
+        from_attributes = True
+        populate_by_name = True
+
 class ContentCheckRequest(BaseModel):
     content: str
     content_type: str = "text"  # text, profile, ride
@@ -69,11 +77,17 @@ class ContentCheckResponse(BaseModel):
     violations: List[Dict[str, Any]]
     requires_review: bool
 
+    class Config:
+        populate_by_name = True
+
 class TrustScoreResponse(BaseModel):
     trust_score: int
     level: str
     warnings: int
     reports: int
+
+    class Config:
+        populate_by_name = True
 
 class ModerationStatsResponse(BaseModel):
     period_days: int
@@ -82,6 +96,9 @@ class ModerationStatsResponse(BaseModel):
     resolved_reports: int
     action_stats: Dict[str, int]
     resolution_rate: float
+
+    class Config:
+        populate_by_name = True
 
 class RuleCreate(BaseModel):
     name: str
@@ -115,6 +132,10 @@ class RuleResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+    class Config:
+        from_attributes = True
+        populate_by_name = True
+
 class FilterCreate(BaseModel):
     filter_type: str
     content: str
@@ -135,9 +156,16 @@ class FilterResponse(BaseModel):
     is_active: bool
     created_at: datetime
 
+    class Config:
+        from_attributes = True
+        populate_by_name = True
+
 class UserViolationsResponse(BaseModel):
     reports: List[Dict[str, Any]]
     actions: List[Dict[str, Any]]
+
+    class Config:
+        populate_by_name = True
 
 class BulkActionRequest(BaseModel):
     report_ids: List[int]
@@ -158,6 +186,9 @@ class BulkActionRequest(BaseModel):
         if v not in allowed_actions:
             raise ValueError(f"Неподдерживаемое действие: {v}")
         return v
+
+    class Config:
+        populate_by_name = True
 
 # Aliases for backward compatibility
 ReportRead = ReportResponse

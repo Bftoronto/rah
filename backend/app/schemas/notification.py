@@ -1,4 +1,4 @@
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, Field
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 import re
@@ -48,6 +48,9 @@ class NotificationResponse(BaseModel):
     notification_id: Optional[str] = None
     sent_at: Optional[datetime] = None
 
+    class Config:
+        populate_by_name = True
+
 class NotificationSettings(BaseModel):
     user_id: int
     ride_notifications: bool = True
@@ -73,6 +76,9 @@ class NotificationSettings(BaseModel):
                 raise ValueError("Время должно быть в формате HH:MM")
         return v
 
+    class Config:
+        populate_by_name = True
+
 class NotificationTemplate(BaseModel):
     name: str
     title: str
@@ -85,6 +91,9 @@ class NotificationTemplate(BaseModel):
         # Проверяем, что все переменные в сообщении определены
         return v
 
+    class Config:
+        populate_by_name = True
+
 class NotificationStats(BaseModel):
     total_sent: int
     successful: int
@@ -93,6 +102,9 @@ class NotificationStats(BaseModel):
     last_24h: int
     last_week: int
     last_month: int
+
+    class Config:
+        populate_by_name = True
 
 class NotificationLog(BaseModel):
     id: str
@@ -104,6 +116,10 @@ class NotificationLog(BaseModel):
     success: bool
     error_message: Optional[str] = None
     telegram_response: Optional[Dict[str, Any]] = None
+
+    class Config:
+        from_attributes = True
+        populate_by_name = True
 
 # Aliases for backward compatibility
 NotificationRead = NotificationResponse

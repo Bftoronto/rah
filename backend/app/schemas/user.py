@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, validator
+from pydantic import BaseModel, EmailStr, validator, Field
 from typing import Optional, List
 from datetime import datetime, date
 import re
@@ -8,17 +8,17 @@ class UserBase(BaseModel):
     telegram_id: str
     phone: str
     full_name: str
-    name: Optional[str] = None  # Для совместимости с фронтендом
+    name: Optional[str] = None  # Алиас для full_name
     balance: int = 500  # Для совместимости с фронтендом
     reviews: int = 0  # Для совместимости с фронтендом
     birth_date: date
     city: str
     avatar_url: Optional[str] = None
-    avatar: Optional[str] = None  # Для совместимости с фронтендом
+    avatar: Optional[str] = None  # Алиас для avatar_url
     verified: dict = {}  # Для совместимости с фронтендом
     car: dict = {}  # Для совместимости с фронтендом
     average_rating: float = 0.0  # Для совместимости с фронтендом
-    rating: int = 0  # Для совместимости с фронтендом
+    rating: int = 0  # Алиас для average_rating
     total_rides: int = 0  # Для совместимости с фронтендом
     cancelled_rides: int = 0  # Для совместимости с фронтендом
     profile_history: Optional[list] = []  # Для совместимости с фронтендом
@@ -81,13 +81,13 @@ class DriverData(BaseModel):
 
 class UserCreate(UserBase):
     id: Optional[int] = None  # Для совместимости с фронтендом
-    name: Optional[str] = None  # Для совместимости с фронтендом
+    name: Optional[str] = None  # Алиас для full_name
     balance: int = 500  # Для совместимости с фронтендом
     reviews: int = 0  # Для совместимости с фронтендом
-    rating: int = 0  # Для совместимости с фронтендом
+    rating: int = 0  # Алиас для average_rating
     verified: dict = {}  # Для совместимости с фронтендом
     car: dict = {}  # Для совместимости с фронтендом
-    avatar: Optional[str] = None  # Для совместимости с фронтендом
+    avatar: Optional[str] = None  # Алиас для avatar_url
     average_rating: float = 0.0  # Для совместимости с фронтендом
     total_rides: int = 0  # Для совместимости с фронтендом
     cancelled_rides: int = 0  # Для совместимости с фронтендом
@@ -117,16 +117,16 @@ class UserCreate(UserBase):
 
 class UserUpdate(BaseModel):
     id: Optional[int] = None  # Для совместимости с фронтендом
-    name: Optional[str] = None  # Для совместимости с фронтендом
+    name: Optional[str] = None  # Алиас для full_name
     phone: Optional[str] = None
     full_name: Optional[str] = None
     birth_date: Optional[date] = None
     city: Optional[str] = None
     avatar_url: Optional[str] = None
-    avatar: Optional[str] = None  # Для совместимости с фронтендом
+    avatar: Optional[str] = None  # Алиас для avatar_url
     balance: Optional[int] = None  # Для совместимости с фронтендом
     reviews: Optional[int] = None  # Для совместимости с фронтендом
-    rating: Optional[int] = None  # Для совместимости с фронтендом
+    rating: Optional[int] = None  # Алиас для average_rating
     verified: Optional[dict] = None  # Для совместимости с фронтендом
     car: Optional[dict] = None  # Для совместимости с фронтендом
     driver_data: Optional[DriverData] = None
@@ -142,10 +142,10 @@ class UserUpdate(BaseModel):
 
 class UserRead(UserBase):
     id: int
-    name: Optional[str] = None  # Для совместимости с фронтендом
+    name: Optional[str] = Field(None, alias="full_name")  # Алиас для full_name
     balance: int = 500  # Для совместимости с фронтендом
     reviews: int = 0  # Для совместимости с фронтендом
-    avatar: Optional[str] = None  # Для совместимости с фронтендом
+    avatar: Optional[str] = Field(None, alias="avatar_url")  # Алиас для avatar_url
     verified: dict = {}  # Для совместимости с фронтендом
     car: dict = {}  # Для совместимости с фронтендом
     is_active: bool
@@ -164,13 +164,15 @@ class UserRead(UserBase):
     created_at: datetime
     updated_at: datetime
     average_rating: float = 0.0
-    rating: int
+    rating: int = Field(0, alias="average_rating")  # Алиас для average_rating
     total_rides: int
     cancelled_rides: int
     profile_history: Optional[list] = []
 
     class Config:
         from_attributes = True
+        populate_by_name = True  # Позволяет использовать алиасы
+        validate_by_name = True
 
 class PrivacyPolicyAccept(BaseModel):
     accepted: bool

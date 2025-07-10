@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional, List
 
@@ -22,6 +22,7 @@ class ChatMessageRead(ChatMessageBase):
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 # Alias for backward compatibility
 MessageCreate = ChatMessageCreate
@@ -46,6 +47,7 @@ class ChatRead(ChatBase):
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 class ChatWithDetails(ChatRead):
     last_message: Optional[ChatMessageRead]
@@ -53,7 +55,13 @@ class ChatWithDetails(ChatRead):
     other_user: Optional[dict]
     ride: Optional[dict]
 
+    class Config:
+        populate_by_name = True
+
 class ChatListResponse(BaseModel):
     chats: List[ChatWithDetails]
     total: int
-    unread_total: int 
+    unread_total: int
+
+    class Config:
+        populate_by_name = True 

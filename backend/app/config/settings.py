@@ -75,6 +75,23 @@ class Settings(BaseSettings):
     auto_moderation: bool = Field(default=True, env="AUTO_MODERATION")
     moderation_threshold: float = Field(default=0.7, env="MODERATION_THRESHOLD")
     
+    # Timezone настройки
+    timezone: str = Field(default="Europe/Moscow", env="TIMEZONE")
+    use_utc: bool = Field(default=True, env="USE_UTC")
+    date_format: str = Field(default="%Y-%m-%d", env="DATE_FORMAT")
+    time_format: str = Field(default="%H:%M:%S", env="TIME_FORMAT")
+    datetime_format: str = Field(default="%Y-%m-%dT%H:%M:%S", env="DATETIME_FORMAT")
+    
+    @validator('timezone')
+    def validate_timezone(cls, v):
+        """Валидация timezone"""
+        import pytz
+        try:
+            pytz.timezone(v)
+            return v
+        except pytz.exceptions.UnknownTimeZoneError:
+            return "Europe/Moscow"  # Fallback на московское время
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

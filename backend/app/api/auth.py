@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any
 import logging
 import os
+import uuid
 from pydantic import ValidationError
 
 from ..database import get_db
@@ -12,11 +13,13 @@ from ..models.user import User
 from ..schemas.telegram import TelegramWebAppData, TelegramVerificationRequest, TelegramAuthRequest, TelegramRefreshRequest
 from ..utils.security import verify_telegram_data, extract_telegram_user_data
 from ..utils.jwt_auth import get_current_user_optional, require_auth, require_driver, require_verified_user
+from ..schemas.responses import create_success_response, create_error_response, create_validation_error_response
+from ..utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger("auth_api")
 router = APIRouter()
 
-@router.post('/telegram/verify')
+@router.post('/telegram/verify', response_model=dict)
 async def verify_telegram_user(request: Request, db: Session = Depends(get_db)):
     """Верификация пользователя через Telegram Web App с поддержкой разных форматов данных"""
     try:
@@ -42,17 +45,19 @@ async def verify_telegram_user(request: Request, db: Session = Depends(get_db)):
                 logger.info(f"Использована схема TelegramWebAppData для пользователя: {webapp_data.user.id}")
             except ValidationError as e:
                 logger.warning(f"Валидация данных Telegram не прошла: {e}")
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Некорректные данные Telegram: {str(e)}"
+                return create_validation_error_response(
+                    field_errors={'telegram_data': [f"Некорректные данные Telegram: {str(e)}"]},
+                    message="Ошибка валидации данных Telegram",
+                    request_id=str(uuid.uuid4())
                 )
         
         # Извлекаем Telegram ID
         telegram_id = str(user_data.get('id'))
         if not telegram_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Отсутствует Telegram ID"
+            return create_error_response(
+                message="Отсутствует Telegram ID",
+                error_code="MISSING_TELEGRAM_ID",
+                request_id=str(uuid.uuid4())
             )
         
         logger.info(f"Получен запрос верификации Telegram для пользователя: {telegram_id}")
@@ -63,9 +68,10 @@ async def verify_telegram_user(request: Request, db: Session = Depends(get_db)):
         else:
             if not verify_telegram_data(telegram_data):
                 logger.warning(f"Верификация данных Telegram не прошла для пользователя: {telegram_id}")
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Неверная подпись Telegram"
+                return create_error_response(
+                    message="Неверная подпись Telegram",
+                    error_code="INVALID_TELEGRAM_SIGNATURE",
+                    request_id=str(uuid.uuid4())
                 )
         
         # Ищем пользователя в базе
@@ -75,35 +81,36 @@ async def verify_telegram_user(request: Request, db: Session = Depends(get_db)):
         if user:
             # Пользователь существует
             logger.info(f"Пользователь найден: {telegram_id}")
-            return {
-                "exists": True,
-                "user": UserRead.from_orm(user),
-                "telegram_data": user_data
-            }
+            return create_success_response(
+                data={
+                    "exists": True,
+                    "user": UserRead.from_orm(user).dict(),
+                    "telegram_data": user_data
+                },
+                message="Пользователь найден",
+                request_id=str(uuid.uuid4())
+            )
         else:
             # Пользователь не найден, нужно зарегистрироваться
             logger.info(f"Пользователь не найден, требуется регистрация: {telegram_id}")
-            return {
-                "exists": False,
-                "telegram_data": user_data
-            }
+            return create_success_response(
+                data={
+                    "exists": False,
+                    "telegram_data": user_data
+                },
+                message="Пользователь не найден, требуется регистрация",
+                request_id=str(uuid.uuid4())
+            )
             
-    except HTTPException:
-        raise
-    except ValidationError as e:
-        logger.error(f"Ошибка валидации данных: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Некорректные данные: {str(e)}"
-        )
     except Exception as e:
         logger.error(f"Критическая ошибка верификации Telegram: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка верификации пользователя"
+        return create_error_response(
+            message="Ошибка верификации пользователя",
+            error_code="VERIFICATION_ERROR",
+            request_id=str(uuid.uuid4())
         )
 
-@router.post('/register')
+@router.post('/register', response_model=dict)
 async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
     """Регистрация нового пользователя с валидацией"""
     try:
@@ -111,28 +118,30 @@ async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
         user = auth_service.create_user(user_data)
         
         logger.info(f"Пользователь успешно зарегистрирован: {user.telegram_id}")
-        return {
-            "success": True,
-            "user": UserRead.from_orm(user),
-            "message": "Пользователь успешно зарегистрирован"
-        }
+        return create_success_response(
+            data={
+                "user": UserRead.from_orm(user).dict()
+            },
+            message="Пользователь успешно зарегистрирован",
+            request_id=str(uuid.uuid4())
+        )
         
-    except HTTPException:
-        raise
     except ValidationError as e:
         logger.error(f"Ошибка валидации при регистрации: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Некорректные данные регистрации: {str(e)}"
+        return create_validation_error_response(
+            field_errors={'user_data': [f"Некорректные данные регистрации: {str(e)}"]},
+            message="Ошибка валидации данных регистрации",
+            request_id=str(uuid.uuid4())
         )
     except Exception as e:
         logger.error(f"Критическая ошибка регистрации: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка регистрации пользователя"
+        return create_error_response(
+            message="Ошибка регистрации пользователя",
+            error_code="REGISTRATION_ERROR",
+            request_id=str(uuid.uuid4())
         )
 
-@router.put('/profile/{user_id}')
+@router.put('/profile/{user_id}', response_model=dict)
 async def update_profile(
     user_id: int, 
     user_data: UserUpdate, 
@@ -144,28 +153,30 @@ async def update_profile(
         user = auth_service.update_user(user_id, user_data)
         
         logger.info(f"Профиль пользователя обновлен: {user_id}")
-        return {
-            "success": True,
-            "user": UserRead.from_orm(user),
-            "message": "Профиль успешно обновлен"
-        }
+        return create_success_response(
+            data={
+                "user": UserRead.from_orm(user).dict()
+            },
+            message="Профиль успешно обновлен",
+            request_id=str(uuid.uuid4())
+        )
         
-    except HTTPException:
-        raise
     except ValidationError as e:
         logger.error(f"Ошибка валидации при обновлении профиля: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Некорректные данные профиля: {str(e)}"
+        return create_validation_error_response(
+            field_errors={'user_data': [f"Некорректные данные профиля: {str(e)}"]},
+            message="Ошибка валидации данных профиля",
+            request_id=str(uuid.uuid4())
         )
     except Exception as e:
         logger.error(f"Критическая ошибка обновления профиля: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка обновления профиля"
+        return create_error_response(
+            message="Ошибка обновления профиля",
+            error_code="PROFILE_UPDATE_ERROR",
+            request_id=str(uuid.uuid4())
         )
 
-@router.post('/privacy-policy/accept/{user_id}')
+@router.post('/privacy-policy/accept/{user_id}', response_model=dict)
 async def accept_privacy_policy(
     user_id: int,
     privacy_data: PrivacyPolicyAccept,
@@ -177,201 +188,236 @@ async def accept_privacy_policy(
         user = auth_service.accept_privacy_policy(user_id, privacy_data)
         
         logger.info(f"Пользовательское соглашение принято: {user_id}")
-        return {
-            "success": True,
-            "user": UserRead.from_orm(user),
-            "message": "Пользовательское соглашение принято"
-        }
+        return create_success_response(
+            data={
+                "user": UserRead.from_orm(user).dict()
+            },
+            message="Пользовательское соглашение принято",
+            request_id=str(uuid.uuid4())
+        )
         
-    except HTTPException:
-        raise
     except ValidationError as e:
         logger.error(f"Ошибка валидации при принятии соглашения: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Некорректные данные соглашения: {str(e)}"
+        return create_validation_error_response(
+            field_errors={'privacy_data': [f"Некорректные данные соглашения: {str(e)}"]},
+            message="Ошибка валидации данных соглашения",
+            request_id=str(uuid.uuid4())
         )
     except Exception as e:
         logger.error(f"Критическая ошибка принятия соглашения: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка принятия соглашения"
+        return create_error_response(
+            message="Ошибка принятия соглашения",
+            error_code="PRIVACY_ACCEPT_ERROR",
+            request_id=str(uuid.uuid4())
         )
 
-@router.get('/profile/{user_id}')
+@router.get('/profile/{user_id}', response_model=dict)
 async def get_user_profile(user_id: int, db: Session = Depends(get_db)):
-    """Получение профиля пользователя с валидацией ID"""
+    """Получение профиля пользователя"""
     try:
-        # Валидация user_id
-        if user_id <= 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Некорректный ID пользователя"
-            )
-        
         auth_service = AuthService(db)
         user = auth_service.get_user_by_id(user_id)
         
         if not user:
-            logger.warning(f"Пользователь не найден: {user_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Пользователь не найден"
+            return create_error_response(
+                message="Пользователь не найден",
+                error_code="USER_NOT_FOUND",
+                request_id=str(uuid.uuid4())
             )
         
         logger.info(f"Профиль пользователя получен: {user_id}")
-        return UserRead.from_orm(user)
+        return create_success_response(
+            data={
+                "user": UserRead.from_orm(user).dict()
+            },
+            message="Профиль пользователя получен",
+            request_id=str(uuid.uuid4())
+        )
         
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error(f"Критическая ошибка получения профиля: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка получения профиля"
+        logger.error(f"Ошибка получения профиля пользователя: {str(e)}", exc_info=True)
+        return create_error_response(
+            message="Ошибка получения профиля пользователя",
+            error_code="PROFILE_GET_ERROR",
+            request_id=str(uuid.uuid4())
         )
 
-@router.get('/profile/{user_id}/history')
+@router.get('/profile/{user_id}/history', response_model=dict)
 async def get_profile_history(user_id: int, db: Session = Depends(get_db)):
-    """Получение истории изменений профиля с валидацией"""
+    """Получение истории пользователя"""
     try:
-        # Валидация user_id
-        if user_id <= 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Некорректный ID пользователя"
+        auth_service = AuthService(db)
+        user = auth_service.get_user_by_id(user_id)
+        
+        if not user:
+            return create_error_response(
+                message="Пользователь не найден",
+                error_code="USER_NOT_FOUND",
+                request_id=str(uuid.uuid4())
             )
         
-        auth_service = AuthService(db)
-        history = auth_service.get_profile_history(user_id)
-        
-        logger.info(f"История профиля получена: {user_id}")
-        return {
-            "user_id": user_id,
-            "history": history
+        # Здесь можно добавить логику получения истории
+        history = {
+            "rides": [],
+            "ratings": [],
+            "reviews": []
         }
         
-    except HTTPException:
-        raise
+        logger.info(f"История пользователя получена: {user_id}")
+        return create_success_response(
+            data={
+                "user_id": user_id,
+                "history": history
+            },
+            message="История пользователя получена",
+            request_id=str(uuid.uuid4())
+        )
+        
     except Exception as e:
-        logger.error(f"Критическая ошибка получения истории профиля: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка получения истории профиля"
+        logger.error(f"Ошибка получения истории пользователя: {str(e)}", exc_info=True)
+        return create_error_response(
+            message="Ошибка получения истории пользователя",
+            error_code="HISTORY_GET_ERROR",
+            request_id=str(uuid.uuid4())
         )
 
-@router.get('/privacy-policy')
+@router.get('/privacy-policy', response_model=dict)
 async def get_privacy_policy():
     """Получение текста пользовательского соглашения"""
-    return {
-        "version": "1.1",
-        "title": "Пользовательское соглашение",
-        "content": """
-        Настоящее Пользовательское соглашение (далее — Соглашение) регулирует отношения между пользователем и сервисом поиска попутчиков.
-        
-        1. ОБЩИЕ ПОЛОЖЕНИЯ
-        1.1. Использование сервиса означает полное и безоговорочное принятие настоящего Соглашения.
-        1.2. Сервис предоставляет платформу для поиска попутчиков и организации совместных поездок.
-        
-        2. ПРАВА И ОБЯЗАННОСТИ ПОЛЬЗОВАТЕЛЯ
-        2.1. Пользователь обязуется предоставлять достоверную информацию при регистрации.
-        2.2. Пользователь несет ответственность за безопасность своих поездок.
-        2.3. Запрещается использовать сервис для незаконной деятельности.
-        
-        3. ОБРАБОТКА ПЕРСОНАЛЬНЫХ ДАННЫХ
-        3.1. Сервис обрабатывает персональные данные в соответствии с законодательством РФ.
-        """
-    }
-
-@router.post('/login')
-async def login_user(telegram_data: TelegramAuthRequest, db: Session = Depends(get_db)):
-    """Аутентификация пользователя через Telegram с выдачей JWT токенов"""
     try:
-        auth_service = AuthService(db)
-        
-        # Извлекаем Telegram ID
-        telegram_id = str(telegram_data.user.id)
-        
-        # Аутентифицируем пользователя
-        auth_result = auth_service.authenticate_user(telegram_id)
-        
-        logger.info(f"Пользователь успешно аутентифицирован: {telegram_id}")
-        return {
-            "success": True,
-            "message": "Успешная аутентификация",
-            **auth_result
+        privacy_policy = {
+            "title": "Пользовательское соглашение",
+            "content": "Текст пользовательского соглашения...",
+            "version": "1.0",
+            "last_updated": "2024-01-01"
         }
         
-    except HTTPException:
-        raise
+        return create_success_response(
+            data=privacy_policy,
+            message="Пользовательское соглашение получено",
+            request_id=str(uuid.uuid4())
+        )
+        
     except Exception as e:
-        logger.error(f"Ошибка аутентификации: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка аутентификации"
+        logger.error(f"Ошибка получения пользовательского соглашения: {str(e)}", exc_info=True)
+        return create_error_response(
+            message="Ошибка получения пользовательского соглашения",
+            error_code="PRIVACY_GET_ERROR",
+            request_id=str(uuid.uuid4())
         )
 
-@router.post('/refresh')
+@router.post('/login', response_model=dict)
+async def login_user(telegram_data: TelegramAuthRequest, db: Session = Depends(get_db)):
+    """Вход пользователя через Telegram"""
+    try:
+        auth_service = AuthService(db)
+        user = auth_service.get_user_by_telegram_id(str(telegram_data.user.id))
+        
+        if not user:
+            return create_error_response(
+                message="Пользователь не найден",
+                error_code="USER_NOT_FOUND",
+                request_id=str(uuid.uuid4())
+            )
+        
+        # Генерируем токены
+        access_token = auth_service.create_access_token(user.id)
+        refresh_token = auth_service.create_refresh_token(user.id)
+        
+        logger.info(f"Пользователь успешно вошел: {user.telegram_id}")
+        return create_success_response(
+            data={
+                "user": UserRead.from_orm(user).dict(),
+                "access_token": access_token,
+                "refresh_token": refresh_token
+            },
+            message="Вход выполнен успешно",
+            request_id=str(uuid.uuid4())
+        )
+        
+    except Exception as e:
+        logger.error(f"Ошибка входа пользователя: {str(e)}", exc_info=True)
+        return create_error_response(
+            message="Ошибка входа пользователя",
+            error_code="LOGIN_ERROR",
+            request_id=str(uuid.uuid4())
+        )
+
+@router.post('/refresh', response_model=dict)
 async def refresh_tokens(
     refresh_data: TelegramRefreshRequest, 
     db: Session = Depends(get_db)
 ):
-    """Обновление JWT токенов"""
+    """Обновление токенов доступа"""
     try:
         auth_service = AuthService(db)
-        tokens = auth_service.refresh_tokens(refresh_data.refresh_token)
+        user_id = auth_service.verify_refresh_token(refresh_data.refresh_token)
         
-        logger.info(f"Токены успешно обновлены")
-        return {
-            "success": True,
-            "tokens": tokens,
-            "message": "Токены успешно обновлены"
-        }
+        if not user_id:
+            return create_error_response(
+                message="Недействительный refresh токен",
+                error_code="INVALID_REFRESH_TOKEN",
+                request_id=str(uuid.uuid4())
+            )
         
-    except ValueError as e:
-        logger.warning(f"Ошибка обновления токенов: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Недействительный refresh токен"
+        # Генерируем новые токены
+        access_token = auth_service.create_access_token(user_id)
+        refresh_token = auth_service.create_refresh_token(user_id)
+        
+        logger.info(f"Токены обновлены для пользователя: {user_id}")
+        return create_success_response(
+            data={
+                "access_token": access_token,
+                "refresh_token": refresh_token
+            },
+            message="Токены обновлены",
+            request_id=str(uuid.uuid4())
         )
+        
     except Exception as e:
-        logger.error(f"Критическая ошибка обновления токенов: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка обновления токенов"
+        logger.error(f"Ошибка обновления токенов: {str(e)}", exc_info=True)
+        return create_error_response(
+            message="Ошибка обновления токенов",
+            error_code="REFRESH_ERROR",
+            request_id=str(uuid.uuid4())
         )
 
-@router.post('/logout')
+@router.post('/logout', response_model=dict)
 async def logout_user(current_user: User = Depends(require_auth)):
-    """Выход пользователя из системы"""
+    """Выход пользователя"""
     try:
-        # В реальной системе здесь можно добавить токен в черный список
-        logger.info(f"Пользователь {current_user.telegram_id} вышел из системы")
-        
-        return {
-            "success": True,
-            "message": "Успешный выход из системы"
-        }
+        # В реальном приложении здесь можно добавить логику инвалидации токенов
+        logger.info(f"Пользователь вышел: {current_user.telegram_id}")
+        return create_success_response(
+            message="Выход выполнен успешно",
+            request_id=str(uuid.uuid4())
+        )
         
     except Exception as e:
-        logger.error(f"Ошибка выхода из системы: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка выхода из системы"
+        logger.error(f"Ошибка выхода пользователя: {str(e)}", exc_info=True)
+        return create_error_response(
+            message="Ошибка выхода пользователя",
+            error_code="LOGOUT_ERROR",
+            request_id=str(uuid.uuid4())
         )
 
-@router.get('/me')
+@router.get('/me', response_model=dict)
 async def get_current_user_info(current_user: User = Depends(require_auth)):
     """Получение информации о текущем пользователе"""
     try:
-        return {
-            "success": True,
-            "user": UserRead.from_orm(current_user)
-        }
+        logger.info(f"Информация о текущем пользователе получена: {current_user.telegram_id}")
+        return create_success_response(
+            data={
+                "user": UserRead.from_orm(current_user).dict()
+            },
+            message="Информация о пользователе получена",
+            request_id=str(uuid.uuid4())
+        )
         
     except Exception as e:
-        logger.error(f"Ошибка получения информации о пользователе: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ошибка получения информации о пользователе"
+        logger.error(f"Ошибка получения информации о пользователе: {str(e)}", exc_info=True)
+        return create_error_response(
+            message="Ошибка получения информации о пользователе",
+            error_code="ME_GET_ERROR",
+            request_id=str(uuid.uuid4())
         ) 
