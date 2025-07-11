@@ -62,18 +62,27 @@ class User(Base):
     
 
     
-    # Индексы для улучшения производительности
+    # Оптимизированные индексы для улучшения производительности
     __table_args__ = (
-        Index('idx_user_telegram_phone', 'telegram_id', 'phone'),
-        Index('idx_user_status', 'is_active', 'is_verified', 'is_driver'),
-        Index('idx_user_rating_balance', 'average_rating', 'balance'),
-        Index('idx_user_created', 'created_at'),
-        Index('idx_user_city', 'city'),  # Для поиска по городу
-        Index('idx_user_birth_date', 'birth_date'),  # Для возрастных ограничений
-        Index('idx_user_driver_license', 'driver_license_number'),  # Для проверки водительских прав
-        Index('idx_user_car_info', 'car_brand', 'car_model'),  # Для поиска по автомобилю
-        Index('idx_user_updated', 'updated_at'),  # Для отслеживания изменений
-        Index('idx_user_rating_reviews', 'average_rating', 'reviews'),  # Для рейтингов
+        # Основные индексы для поиска
+        Index('idx_user_telegram_active', 'telegram_id', 'is_active'),
+        Index('idx_user_phone_active', 'phone', 'is_active'),
+        Index('idx_user_city_active', 'city', 'is_active'),
+        
+        # Индексы для водителей
+        Index('idx_user_driver_status', 'is_driver', 'is_active', 'is_verified'),
+        Index('idx_user_driver_city', 'city', 'is_driver', 'is_active'),
+        
+        # Индексы для рейтингов
+        Index('idx_user_rating', 'average_rating', 'is_active'),
+        Index('idx_user_rating_city', 'city', 'average_rating', 'is_active'),
+        
+        # Временные индексы
+        Index('idx_user_created_active', 'created_at', 'is_active'),
+        Index('idx_user_updated', 'updated_at'),
+        
+        # Индексы для статистики
+        Index('idx_user_rides_stats', 'total_rides', 'cancelled_rides', 'is_active'),
     )
 
 class ProfileChangeLog(Base):

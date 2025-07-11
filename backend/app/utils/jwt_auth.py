@@ -81,10 +81,25 @@ class JWTAuth:
     
     def verify_token(self, token: str, token_type: str = "access") -> Dict[str, Any]:
         """
-        Верификация JWT токена с многоуровневой обработкой ошибок и логированием.
+        Верификация JWT токена с усиленной безопасностью и детальной обработкой ошибок
         """
+        if not token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Токен не предоставлен"
+            )
+        
+        # Проверка длины токена (базовая защита от вредоносных данных)
+        if len(token) > 2048:
+            logger.warning("Слишком длинный токен")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Неверный формат токена"
+            )
+        
         try:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
+            
             # Проверка типа токена
             if payload.get("type") != token_type:
                 logger.warning(f"Попытка использовать токен не того типа: {payload.get('type')} вместо {token_type}")
@@ -92,6 +107,7 @@ class JWTAuth:
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Неверный тип токена"
                 )
+            
             # Проверка времени жизни
             exp = payload.get("exp")
             if exp is None:
@@ -100,16 +116,30 @@ class JWTAuth:
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Токен не содержит время жизни"
                 )
+            
             if datetime.utcnow() > datetime.fromtimestamp(exp):
                 logger.warning("Токен истёк")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Токен истёк"
                 )
+            
+            # Проверка обязательных полей
+            required_fields = ["user_id", "telegram_id", "iat"]
+            missing_fields = [field for field in required_fields if field not in payload]
+            if missing_fields:
+                logger.error(f"Отсутствуют обязательные поля в токене: {missing_fields}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Токен содержит неполные данные"
+                )
+            
             # Принцип наименьших привилегий: только нужные поля
-            allowed_fields = {"user_id", "telegram_id", "exp", "type", "iat"}
+            allowed_fields = {"user_id", "telegram_id", "exp", "type", "iat", "jti"}
             filtered_payload = {k: v for k, v in payload.items() if k in allowed_fields}
+            
             return filtered_payload
+            
         except jwt.ExpiredSignatureError:
             logger.warning("Истёкшая подпись токена")
             raise HTTPException(
@@ -121,6 +151,12 @@ class JWTAuth:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Невалидный токен"
+            )
+        except jwt.DecodeError:
+            logger.error("Ошибка декодирования токена")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Поврежденный токен"
             )
         except Exception as e:
             logger.error(f"Неожиданная ошибка при верификации токена: {str(e)}")
