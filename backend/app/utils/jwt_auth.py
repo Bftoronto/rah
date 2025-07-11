@@ -81,52 +81,47 @@ class JWTAuth:
     
     def verify_token(self, token: str, token_type: str = "access") -> Dict[str, Any]:
         """
-        Верификация JWT токена
-        
-        Args:
-            token: JWT токен
-            token_type: Тип токена (access/refresh)
-            
-        Returns:
-            Dict[str, Any]: Данные из токена
-            
-        Raises:
-            HTTPException: При неверном токене
+        Верификация JWT токена с многоуровневой обработкой ошибок и логированием.
         """
         try:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
-            
-            # Проверяем тип токена
+            # Проверка типа токена
             if payload.get("type") != token_type:
+                logger.warning(f"Попытка использовать токен не того типа: {payload.get('type')} вместо {token_type}")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Неверный тип токена"
                 )
-            
-            # Проверяем время жизни
+            # Проверка времени жизни
             exp = payload.get("exp")
             if exp is None:
+                logger.error("Токен не содержит время жизни (exp)")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Токен не содержит время жизни"
                 )
-            
             if datetime.utcnow() > datetime.fromtimestamp(exp):
+                logger.warning("Токен истёк")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Токен истек"
+                    detail="Токен истёк"
                 )
-            
-            return payload
-            
-        except jwt.PyJWTError as e:
-            logger.warning(f"Ошибка верификации JWT токена: {str(e)}")
+            # Принцип наименьших привилегий: только нужные поля
+            allowed_fields = {"user_id", "telegram_id", "exp", "type", "iat"}
+            filtered_payload = {k: v for k, v in payload.items() if k in allowed_fields}
+            return filtered_payload
+        except jwt.ExpiredSignatureError:
+            logger.warning("Истёкшая подпись токена")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Неверный токен"
+                detail="Истёкшая подпись токена"
             )
-        except HTTPException:
-            raise
+        except jwt.InvalidTokenError as e:
+            logger.error(f"Невалидный токен: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Невалидный токен"
+            )
         except Exception as e:
             logger.error(f"Неожиданная ошибка при верификации токена: {str(e)}")
             raise HTTPException(

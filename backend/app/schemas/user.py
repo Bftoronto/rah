@@ -80,65 +80,47 @@ class DriverData(BaseModel):
         return v
 
 class UserCreate(UserBase):
-    id: Optional[int] = None  # Для совместимости с фронтендом
-    name: Optional[str] = None  # Алиас для full_name
-    balance: int = 500  # Для совместимости с фронтендом
-    reviews: int = 0  # Для совместимости с фронтендом
-    rating: int = 0  # Алиас для average_rating
-    verified: dict = {}  # Для совместимости с фронтендом
-    car: dict = {}  # Для совместимости с фронтендом
-    avatar: Optional[str] = None  # Алиас для avatar_url
-    average_rating: float = 0.0  # Для совместимости с фронтендом
-    total_rides: int = 0  # Для совместимости с фронтендом
-    cancelled_rides: int = 0  # Для совместимости с фронтендом
-    profile_history: Optional[list] = []  # Для совместимости с фронтендом
-    is_active: bool = True  # Для совместимости с фронтендом
-    is_verified: bool = False  # Для совместимости с фронтендом
-    is_driver: bool = False  # Для совместимости с фронтендом
-    privacy_policy_version: str = "1.1"  # Для совместимости с фронтендом
-    privacy_policy_accepted: bool = False
-    privacy_policy_accepted_at: Optional[datetime] = None  # Для совместимости с фронтендом
-    car_brand: Optional[str] = None  # Для совместимости с фронтендом
-    car_model: Optional[str] = None  # Для совместимости с фронтендом
-    car_year: Optional[int] = None  # Для совместимости с фронтендом
-    car_color: Optional[str] = None  # Для совместимости с фронтендом
-    driver_license_number: Optional[str] = None  # Для совместимости с фронтендом
-    driver_license_photo_url: Optional[str] = None  # Для совместимости с фронтендом
-    car_photo_url: Optional[str] = None  # Для совместимости с фронтендом
-    created_at: Optional[datetime] = None  # Для совместимости с фронтендом
-    updated_at: Optional[datetime] = None  # Для совместимости с фронтендом
-    driver_data: Optional[DriverData] = None
-    
-    @validator('privacy_policy_accepted')
-    def validate_privacy_policy(cls, v):
-        if not v:
-            raise ValueError('Необходимо принять пользовательское соглашение')
-        return v
+    """
+    Схема создания пользователя. Использует строгую валидацию UserBase и расширяет только необходимыми полями.
+    """
+    pass
 
-class UserUpdate(BaseModel):
-    id: Optional[int] = None  # Для совместимости с фронтендом
-    name: Optional[str] = None  # Алиас для full_name
+class UserUpdate(UserBase):
+    """
+    Схема обновления пользователя. Все поля опциональны, валидация наследуется от UserBase.
+    """
+    id: Optional[int] = None
+    telegram_id: Optional[str] = None
     phone: Optional[str] = None
     full_name: Optional[str] = None
     birth_date: Optional[date] = None
     city: Optional[str] = None
     avatar_url: Optional[str] = None
-    avatar: Optional[str] = None  # Алиас для avatar_url
-    balance: Optional[int] = None  # Для совместимости с фронтендом
-    reviews: Optional[int] = None  # Для совместимости с фронтендом
-    rating: Optional[int] = None  # Алиас для average_rating
-    verified: Optional[dict] = None  # Для совместимости с фронтендом
-    car: Optional[dict] = None  # Для совместимости с фронтендом
+    avatar: Optional[str] = None
+    balance: Optional[int] = None
+    reviews: Optional[int] = None
+    rating: Optional[int] = None
+    verified: Optional[dict] = None
+    car: Optional[dict] = None
+    average_rating: Optional[float] = None
+    total_rides: Optional[int] = None
+    cancelled_rides: Optional[int] = None
+    profile_history: Optional[list] = None
+    is_active: Optional[bool] = None
+    is_verified: Optional[bool] = None
+    is_driver: Optional[bool] = None
+    privacy_policy_version: Optional[str] = None
+    privacy_policy_accepted: Optional[bool] = None
+    privacy_policy_accepted_at: Optional[datetime] = None
+    car_brand: Optional[str] = None
+    car_model: Optional[str] = None
+    car_year: Optional[int] = None
+    car_color: Optional[str] = None
+    driver_license_number: Optional[str] = None
+    driver_license_photo_url: Optional[str] = None
+    car_photo_url: Optional[str] = None
     driver_data: Optional[DriverData] = None
-    
-    @validator('phone')
-    def validate_phone(cls, v):
-        if v is not None:
-            phone_clean = re.sub(r'\D', '', v)
-            if len(phone_clean) < 10:
-                raise ValueError('Номер телефона должен содержать минимум 10 цифр')
-            return phone_clean
-        return v
+    # Вся валидация и синхронизация полей — через UserBase и валидаторы
 
 class UserRead(UserBase):
     id: int
