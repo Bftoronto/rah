@@ -1,4 +1,4 @@
-import { showNotification } from '../utils.js';
+import Utils from '../utils.js';
 
 class ReportScreen {
     constructor() {
@@ -194,13 +194,12 @@ class ReportScreen {
     }
 
     showSuccess(message) {
-        showNotification(message, 'success');
+        Utils.showNotification('Успех', message, 'success');
     }
 
     showError(message) {
-        showNotification(message, 'error');
+        Utils.showNotification('Ошибка', message, 'error');
     }
 }
 
-// Создание глобального экземпляра
-const reportScreen = new ReportScreen(); 
+export default ReportScreen; 

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест импортов PAX</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <h1>Тест исправления импортов PAX</h1>
+    <div id="results"></div>
+    
+    <script type="module">
+        import Utils from './assets/js/utils.js';
+        import { API } from './assets/js/api.js';
+        import { stateManager } from './assets/js/state.js';
+        import screens from './assets/js/screens/index.js';
+        import { router } from './assets/js/router.js';
+        import { wsManager } from './assets/js/websocket.js';
+        import app from './assets/js/app.js';
+        
+        const results = document.getElementById('results');
+        
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+        
+        addResult('Начинаем тестирование импортов...', 'info');
+        
+        try {
+            // Тест 1: Проверка Utils
+            addResult('Тест 1: Проверка Utils...', 'info');
+            if (Utils && typeof Utils.showNotification === 'function') {
+                addResult('✅ Utils работает корректно', 'success');
+            } else {
+                addResult('❌ Utils не работает', 'error');
+            }
+            
+            // Тест 2: Проверка API
+            addResult('Тест 2: Проверка API...', 'info');
+            if (API && typeof API.request === 'function') {
+                addResult('✅ API работает корректно', 'success');
+            } else {
+                addResult('❌ API не работает', 'error');
+            }
+            
+            // Тест 3: Проверка stateManager
+            addResult('Тест 3: Проверка stateManager...', 'info');
+            if (stateManager && typeof stateManager.setState === 'function') {
+                addResult('✅ stateManager работает корректно', 'success');
+            } else {
+                addResult('❌ stateManager не работает', 'error');
+            }
+            
+            // Тест 4: Проверка screens
+            addResult('Тест 4: Проверка screens...', 'info');
+            if (screens && typeof screens === 'object') {
+                addResult('✅ screens работает корректно', 'success');
+            } else {
+                addResult('❌ screens не работает', 'error');
+            }
+            
+            // Тест 5: Проверка RegistrationScreens
+            addResult('Тест 5: Проверка RegistrationScreens...', 'info');
+            if (screens.privacyPolicy && screens.basicInfo && screens.driverInfo) {
+                addResult('✅ RegistrationScreens доступны успешно', 'success');
+            } else {
+                addResult('❌ RegistrationScreens недоступны', 'error');
+            }
+            
+            // Тест 6: Проверка router
+            addResult('Тест 6: Проверка router...', 'info');
+            if (router && typeof router.navigate === 'function') {
+                addResult('✅ router работает корректно', 'success');
+            } else {
+                addResult('❌ router не работает', 'error');
+            }
+            
+            // Тест 7: Проверка wsManager
+            addResult('Тест 7: Проверка wsManager...', 'info');
+            if (wsManager && typeof wsManager.connect === 'function') {
+                addResult('✅ wsManager работает корректно', 'success');
+            } else {
+                addResult('❌ wsManager не работает', 'error');
+            }
+            
+            // Тест 8: Проверка app
+            addResult('Тест 8: Проверка app...', 'info');
+            if (app && typeof app.init === 'function') {
+                addResult('✅ app работает корректно', 'success');
+            } else {
+                addResult('❌ app не работает', 'error');
+            }
+            
+            addResult('🎉 Все импорты работают корректно!', 'success');
+            
+        } catch (error) {
+            addResult(`❌ Ошибка тестирования: ${error.message}`, 'error');
+            console.error('Детали ошибки:', error);
+        }
+    </script>
+</body>
+</html> 

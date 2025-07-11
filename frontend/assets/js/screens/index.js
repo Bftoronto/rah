@@ -55,7 +55,7 @@ const screens = {
     notificationSettings: NotificationSettingsScreen,
     rating: RatingScreen,
     loading: LoadingScreen,
-    // Экраны регистрации
+    // Экраны регистрации - исправляем доступ к именованным экспортам
     privacyPolicy: RegistrationScreens.privacyPolicy,
     basicInfo: RegistrationScreens.basicInfo,
     driverInfo: RegistrationScreens.driverInfo

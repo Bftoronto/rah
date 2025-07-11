@@ -1,4 +1,4 @@
-import { showNotification } from '../utils.js';
+import Utils from '../utils.js';
 
 class NotificationSettingsScreen {
     constructor() {
@@ -190,13 +190,12 @@ class NotificationSettingsScreen {
     }
 
     showSuccess(message) {
-        showNotification(message, 'success');
+        Utils.showNotification('Успех', message, 'success');
     }
 
     showError(message) {
-        showNotification(message, 'error');
+        Utils.showNotification('Ошибка', message, 'error');
     }
 }
 
-// Создание глобального экземпляра
-const notificationSettingsScreen = new NotificationSettingsScreen();
+export default NotificationSettingsScreen;
