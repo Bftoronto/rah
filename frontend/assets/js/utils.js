@@ -92,7 +92,7 @@ class ErrorHandler {
 
         Utils.showNotification('Ошибка', message, 'error');
     }
-
+}
 
 // Глобальный обработчик ошибок
 const errorHandler = new ErrorHandler();

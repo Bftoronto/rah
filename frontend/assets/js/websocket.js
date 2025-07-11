@@ -1,5 +1,5 @@
 import { API } from './api.js';
-import { Utils } from './utils.js';
+import Utils from './utils.js';
 
 // Класс для управления WebSocket соединениями
 class WebSocketManager {

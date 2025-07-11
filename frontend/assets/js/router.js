@@ -1,5 +1,5 @@
 import { stateManager } from './state.js';
-import { Utils } from './utils.js';
+import Utils from './utils.js';
 import screens from './screens/index.js';
 
 // Маршрутизатор для навигации между экранами

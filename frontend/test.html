@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test PAX Modules</title>
+</head>
+<body>
+    <h1>Тестирование модулей PAX</h1>
+    <div id="output"></div>
+    
+    <script type="module">
+        try {
+            // Тестируем импорт utils
+            import Utils from './assets/js/utils.js';
+            console.log('Utils импортирован успешно:', Utils);
+            
+            // Тестируем импорт constants
+            import { APP_CONFIG } from './config/constants.js';
+            console.log('Constants импортированы успешно:', APP_CONFIG);
+            
+            // Тестируем импорт API
+            import { API } from './assets/js/api.js';
+            console.log('API импортирован успешно:', API);
+            
+            // Тестируем импорт app
+            import app from './assets/js/app.js';
+            console.log('App импортирован успешно:', app);
+            
+            document.getElementById('output').innerHTML = '<p style="color: green;">Все модули импортированы успешно!</p>';
+            
+        } catch (error) {
+            console.error('Ошибка импорта:', error);
+            document.getElementById('output').innerHTML = `<p style="color: red;">Ошибка: ${error.message}</p>`;
+        }
+    </script>
+</body>
+</html>

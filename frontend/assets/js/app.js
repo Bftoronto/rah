@@ -1,5 +1,5 @@
 import { stateManager } from './state.js';
-import { Utils } from './utils.js';
+import Utils from './utils.js';
 import { API } from './api.js';
 import { router, Router } from './router.js';
 
