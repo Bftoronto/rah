@@ -301,4 +301,3 @@ class TimeSelectionScreen {
 }
 
 export { DateSelectionScreen, TimeSelectionScreen };
-export default DateSelectionScreen;

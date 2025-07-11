@@ -402,4 +402,3 @@ class UploadDriverLicenseScreen {
 }
 
 export { UploadAvatarScreen, UploadCarPhotoScreen, UploadDriverLicenseScreen };
-export default UploadAvatarScreen;

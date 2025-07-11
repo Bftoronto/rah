@@ -12,7 +12,7 @@ import { UploadAvatarScreen, UploadCarPhotoScreen } from './upload.js';
 import EditProfileScreen from './editProfile.js';
 import RestrictedScreen from './restricted.js';
 import CreateRideSuccessScreen from './success.js';
-import RegistrationScreens from './registration.js';
+import { RegistrationScreens } from './registration.js';
 import NotificationSettingsScreen from './notificationSettings.js';
 import RatingScreen from './rating.js';
 
