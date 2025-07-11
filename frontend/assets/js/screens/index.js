@@ -12,7 +12,6 @@ import { UploadAvatarScreen, UploadCarPhotoScreen } from './upload.js';
 import EditProfileScreen from './editProfile.js';
 import RestrictedScreen from './restricted.js';
 import CreateRideSuccessScreen from './success.js';
-import { RegistrationScreens } from './registration.js';
 import NotificationSettingsScreen from './notificationSettings.js';
 import RatingScreen from './rating.js';
 
@@ -54,11 +53,28 @@ const screens = {
     createRideSuccess: CreateRideSuccessScreen,
     notificationSettings: NotificationSettingsScreen,
     rating: RatingScreen,
-    loading: LoadingScreen,
-    // Экраны регистрации - исправляем доступ к именованным экспортам
-    privacyPolicy: RegistrationScreens.privacyPolicy,
-    basicInfo: RegistrationScreens.basicInfo,
-    driverInfo: RegistrationScreens.driverInfo
+    loading: LoadingScreen
 };
+
+// Динамический импорт экранов регистрации для избежания циклических зависимостей
+async function getRegistrationScreens() {
+    try {
+        const { RegistrationScreens } = await import('./registration.js');
+        return {
+            privacyPolicy: RegistrationScreens.privacyPolicy,
+            basicInfo: RegistrationScreens.basicInfo,
+            driverInfo: RegistrationScreens.driverInfo
+        };
+    } catch (error) {
+        console.error('Ошибка загрузки экранов регистрации:', error);
+        return {};
+    }
+}
+
+// Функция для получения всех экранов включая регистрацию
+export async function getAllScreens() {
+    const registrationScreens = await getRegistrationScreens();
+    return { ...screens, ...registrationScreens };
+}
 
 export default screens; 

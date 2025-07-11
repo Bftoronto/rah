@@ -21,8 +21,8 @@ class App {
             // Инициализация глобальных объектов
             this.initGlobalObjects();
             
-            // Инициализация роутера
-            this.initRouter();
+            // Инициализация роутера (асинхронно)
+            await this.initRouter();
             
             // Инициализация нижней навигации
             this.initBottomNavigation();
@@ -61,13 +61,16 @@ class App {
         window.router = this.router;
     }
 
-    initRouter() {
+    async initRouter() {
         this.router = router;
         window.router = this.router;
         
         // Добавляем middleware
         this.router.use(Router.authMiddleware);
         this.router.use(Router.loggingMiddleware);
+        
+        // Инициализируем роутер асинхронно
+        await this.router.init();
     }
 
     initBottomNavigation() {

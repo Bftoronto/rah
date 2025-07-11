@@ -1,6 +1,6 @@
 import { stateManager } from './state.js';
 import Utils from './utils.js';
-import screens from './screens/index.js';
+import screens, { getAllScreens } from './screens/index.js';
 
 // Маршрутизатор для навигации между экранами
 class Router {
@@ -177,17 +177,28 @@ class Router {
     }
     
     // Инициализация маршрутизатора
-    init() {
-        // Регистрируем все экраны напрямую через статический импорт
-        Object.keys(screens).forEach(screenName => {
-            this.screens.set(screenName, screens[screenName]);
-        });
-        
-        // Настраиваем навигацию по нижнему меню
-        this.setupNavigation();
-        
-        // Загружаем сохраненное состояние
-        stateManager.loadFromStorage();
+    async init() {
+        try {
+            // Получаем все экраны включая регистрацию
+            const allScreens = await getAllScreens();
+            
+            // Регистрируем все экраны
+            Object.keys(allScreens).forEach(screenName => {
+                this.screens.set(screenName, allScreens[screenName]);
+            });
+            
+            // Настраиваем навигацию по нижнему меню
+            this.setupNavigation();
+            
+            // Загружаем сохраненное состояние
+            stateManager.loadFromStorage();
+        } catch (error) {
+            console.error('Ошибка инициализации роутера:', error);
+            // Fallback на базовые экраны
+            Object.keys(screens).forEach(screenName => {
+                this.screens.set(screenName, screens[screenName]);
+            });
+        }
     }
     
     // Настройка навигации по нижнему меню
