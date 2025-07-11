@@ -183,12 +183,16 @@ class ErrorBoundary {
      */
     async reportError(errorInfo) {
         try {
+            const payload = {
+                type: errorInfo.type || 'UnhandledError',
+                data: { ...errorInfo }
+            };
             await fetch('/api/monitoring/errors', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(errorInfo)
+                body: JSON.stringify(payload)
             });
         } catch (reportError) {
             console.error('Failed to report error:', reportError);
