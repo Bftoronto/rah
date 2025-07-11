@@ -13,7 +13,7 @@ from ..models.user import User
 from ..schemas.upload import UploadResponse
 from ..schemas.responses import create_success_response, create_error_response, create_validation_error_response
 from ..utils.logger import get_logger
-from ..utils.file_handler import get_file_handler, FileValidationError, FileProcessingError
+from ..utils.file_handler_alternative import get_file_handler, FileValidationError, FileProcessingError
 from ..config.settings import settings
 
 logger = get_logger("upload_api")

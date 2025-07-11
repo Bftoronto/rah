@@ -1,0 +1,82 @@
+{
+  "errors": {
+    "validation": {
+      "title": "Validation Error",
+      "invalid_data": "Invalid data",
+      "required_field": "Required field",
+      "invalid_format": "Invalid format",
+      "too_short": "Value too short",
+      "too_long": "Value too long",
+      "invalid_email": "Invalid email format",
+      "invalid_phone": "Invalid phone format",
+      "invalid_date": "Invalid date format",
+      "invalid_rating": "Rating must be between 1 and 5",
+      "invalid_price": "Invalid price",
+      "invalid_seats": "Invalid number of seats"
+    },
+    "authentication": {
+      "title": "Authentication Error",
+      "invalid_credentials": "Invalid credentials",
+      "token_expired": "Token expired",
+      "token_invalid": "Invalid token",
+      "user_not_found": "User not found",
+      "unauthorized": "Unauthorized",
+      "forbidden": "Forbidden",
+      "telegram_verification_failed": "Telegram verification failed"
+    },
+    "authorization": {
+      "title": "Authorization Error",
+      "insufficient_permissions": "Insufficient permissions",
+      "driver_required": "Driver permissions required",
+      "verified_user_required": "Verified user required"
+    },
+    "not_found": {
+      "title": "Not Found",
+      "user_not_found": "User not found",
+      "ride_not_found": "Ride not found",
+      "rating_not_found": "Rating not found",
+      "message_not_found": "Message not found",
+      "file_not_found": "File not found"
+    },
+    "server": {
+      "title": "Server Error",
+      "internal_error": "Internal server error",
+      "database_error": "Database error",
+      "file_upload_error": "File upload error",
+      "external_service_error": "External service error"
+    },
+    "rate_limit": {
+      "title": "Rate Limit Exceeded",
+      "too_many_requests": "Too many requests",
+      "try_later": "Try again later"
+    },
+    "business_logic": {
+      "title": "Business Logic Error",
+      "ride_already_booked": "Ride already booked",
+      "insufficient_seats": "Insufficient seats",
+      "ride_in_past": "Ride in the past",
+      "self_rating": "Cannot rate yourself",
+      "duplicate_rating": "Rating already exists"
+    }
+  },
+  "success": {
+    "user_registered": "User successfully registered",
+    "user_updated": "User successfully updated",
+    "ride_created": "Ride successfully created",
+    "ride_updated": "Ride successfully updated",
+    "ride_deleted": "Ride successfully deleted",
+    "rating_created": "Rating successfully created",
+    "rating_updated": "Rating successfully updated",
+    "message_sent": "Message successfully sent",
+    "file_uploaded": "File successfully uploaded",
+    "settings_updated": "Settings successfully updated"
+  },
+  "messages": {
+    "welcome": "Welcome to PAX!",
+    "ride_search_results": "Found {count} rides",
+    "no_rides_found": "No rides found",
+    "booking_confirmed": "Booking confirmed",
+    "payment_successful": "Payment successful",
+    "notification_sent": "Notification sent"
+  }
+}

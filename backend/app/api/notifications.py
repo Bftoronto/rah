@@ -10,7 +10,7 @@ from ..schemas.notification import (
     NotificationCreate, BulkNotificationCreate, NotificationResponse,
     NotificationSettings, NotificationStats
 )
-from ..utils.jwt_auth import get_current_user_id
+from ..utils.security import get_current_user_id
 from ..utils.websocket_manager import handle_websocket_connection, send_notification_to_user, send_notification_to_subscription, broadcast_notification
 from ..schemas.responses import create_success_response, create_error_response, create_paginated_response
 from ..utils.logger import get_logger

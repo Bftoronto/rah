@@ -1,0 +1,82 @@
+{
+  "errors": {
+    "validation": {
+      "title": "Ошибка валидации",
+      "invalid_data": "Некорректные данные",
+      "required_field": "Обязательное поле",
+      "invalid_format": "Неверный формат",
+      "too_short": "Слишком короткое значение",
+      "too_long": "Слишком длинное значение",
+      "invalid_email": "Неверный формат email",
+      "invalid_phone": "Неверный формат телефона",
+      "invalid_date": "Неверный формат даты",
+      "invalid_rating": "Рейтинг должен быть от 1 до 5",
+      "invalid_price": "Неверная цена",
+      "invalid_seats": "Неверное количество мест"
+    },
+    "authentication": {
+      "title": "Ошибка аутентификации",
+      "invalid_credentials": "Неверные учетные данные",
+      "token_expired": "Токен истек",
+      "token_invalid": "Недействительный токен",
+      "user_not_found": "Пользователь не найден",
+      "unauthorized": "Не авторизован",
+      "forbidden": "Доступ запрещен",
+      "telegram_verification_failed": "Ошибка верификации Telegram"
+    },
+    "authorization": {
+      "title": "Ошибка авторизации",
+      "insufficient_permissions": "Недостаточно прав",
+      "driver_required": "Требуются права водителя",
+      "verified_user_required": "Требуется верифицированный пользователь"
+    },
+    "not_found": {
+      "title": "Не найдено",
+      "user_not_found": "Пользователь не найден",
+      "ride_not_found": "Поездка не найдена",
+      "rating_not_found": "Рейтинг не найден",
+      "message_not_found": "Сообщение не найдено",
+      "file_not_found": "Файл не найден"
+    },
+    "server": {
+      "title": "Ошибка сервера",
+      "internal_error": "Внутренняя ошибка сервера",
+      "database_error": "Ошибка базы данных",
+      "file_upload_error": "Ошибка загрузки файла",
+      "external_service_error": "Ошибка внешнего сервиса"
+    },
+    "rate_limit": {
+      "title": "Превышен лимит запросов",
+      "too_many_requests": "Слишком много запросов",
+      "try_later": "Попробуйте позже"
+    },
+    "business_logic": {
+      "title": "Ошибка бизнес-логики",
+      "ride_already_booked": "Поездка уже забронирована",
+      "insufficient_seats": "Недостаточно мест",
+      "ride_in_past": "Поездка в прошлом",
+      "self_rating": "Нельзя оценить самого себя",
+      "duplicate_rating": "Рейтинг уже существует"
+    }
+  },
+  "success": {
+    "user_registered": "Пользователь успешно зарегистрирован",
+    "user_updated": "Пользователь успешно обновлен",
+    "ride_created": "Поездка успешно создана",
+    "ride_updated": "Поездка успешно обновлена",
+    "ride_deleted": "Поездка успешно удалена",
+    "rating_created": "Рейтинг успешно создан",
+    "rating_updated": "Рейтинг успешно обновлен",
+    "message_sent": "Сообщение успешно отправлено",
+    "file_uploaded": "Файл успешно загружен",
+    "settings_updated": "Настройки успешно обновлены"
+  },
+  "messages": {
+    "welcome": "Добро пожаловать в PAX!",
+    "ride_search_results": "Найдено {count} поездок",
+    "no_rides_found": "Поездки не найдены",
+    "booking_confirmed": "Бронирование подтверждено",
+    "payment_successful": "Оплата прошла успешно",
+    "notification_sent": "Уведомление отправлено"
+  }
+}
