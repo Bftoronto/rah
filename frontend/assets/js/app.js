@@ -341,3 +341,5 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 export default app; 
+
+// Trigger Netlify rebuild
