@@ -8,6 +8,7 @@ import json
 from ..database import get_db
 from ..utils.error_handler import api_error_handler
 from ..utils.logger import get_logger
+from ..schemas.monitoring import FrontendError
 
 logger = get_logger("monitoring")
 router = APIRouter()
@@ -44,24 +45,17 @@ async def receive_metrics(metrics_data: Dict[str, Any]):
         raise api_error_handler.handle_server_error(e, "receive_metrics")
 
 @router.post("/errors")
-async def receive_errors(error_data: Dict[str, Any]):
+async def receive_errors(error_data: FrontendError):
     """Получение ошибок от фронтенда"""
     try:
+        logger.error(f"Frontend error: {error_data.type} - {error_data.data.get('message', 'Unknown error')}")
         # Добавляем временную метку
-        error_data["received_at"] = datetime.now().isoformat()
-        
-        # Сохраняем ошибки
-        errors_store.append(error_data)
-        
-        # Ограничиваем количество хранимых ошибок
+        error_dict = error_data.dict()
+        error_dict["received_at"] = datetime.now().isoformat()
+        errors_store.append(error_dict)
         if len(errors_store) > 500:
             errors_store.pop(0)
-        
-        # Логируем ошибки
-        logger.error(f"Frontend error: {error_data.get('type')} - {error_data.get('data', {}).get('message', 'Unknown error')}")
-        
         return {"success": True, "message": "Ошибка зарегистрирована"}
-        
     except Exception as e:
         logger.error(f"Ошибка обработки ошибок: {str(e)}")
         raise api_error_handler.handle_server_error(e, "receive_errors")
