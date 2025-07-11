@@ -2,6 +2,41 @@ import { stateManager } from './state.js';
 import Utils from './utils.js';
 import screens, { getAllScreens } from './screens/index.js';
 
+// Импорты для fallback экранов
+import FindRideScreen from './screens/findRide.js';
+import MyRidesScreen from './screens/myRides.js';
+import CreateRideScreen from './screens/createRide.js';
+import ProfileScreen from './screens/profile.js';
+import RideResultsScreen from './screens/rideResults.js';
+import RideDetailsScreen from './screens/rideDetails.js';
+import DriverProfileScreen from './screens/driverProfile.js';
+import { DateSelectionScreen, TimeSelectionScreen } from './screens/dateTimeSelection.js';
+import ChatScreen from './screens/chat.js';
+import { UploadAvatarScreen, UploadCarPhotoScreen } from './screens/upload.js';
+import EditProfileScreen from './screens/editProfile.js';
+import RestrictedScreen from './screens/restricted.js';
+import CreateRideSuccessScreen from './screens/success.js';
+import NotificationSettingsScreen from './screens/notificationSettings.js';
+import RatingScreen from './screens/rating.js';
+
+// Экран загрузки для fallback
+class LoadingScreen {
+    render(message = "Загрузка...") {
+        return `
+            <div class="loading-container">
+                <div>
+                    <div class="loader"></div>
+                    <div class="text-center mt-20">${message}</div>
+                </div>
+            </div>
+        `;
+    }
+
+    setupEventHandlers() {
+        // Нет обработчиков для экрана загрузки
+    }
+}
+
 // Маршрутизатор для навигации между экранами
 class Router {
     constructor() {
@@ -25,7 +60,7 @@ class Router {
     // Создание экземпляра экрана
     getScreenInstance(screenName) {
         if (!this.screenInstances[screenName]) {
-            const ScreenClass = screens[screenName];
+            const ScreenClass = this.screens.get(screenName);
             if (ScreenClass) {
                 this.screenInstances[screenName] = new ScreenClass();
             } else {
@@ -38,8 +73,8 @@ class Router {
     
     // Навигация к экрану
     async navigate(screenName, data = null) {
-        // Проверяем существование экрана через screens объект, а не Map
-        if (!screens[screenName]) {
+        // Проверяем существование экрана через Map
+        if (!this.screens.has(screenName)) {
             console.error(`Экран ${screenName} не найден`);
             return;
         }
@@ -194,9 +229,30 @@ class Router {
             stateManager.loadFromStorage();
         } catch (error) {
             console.error('Ошибка инициализации роутера:', error);
-            // Fallback на базовые экраны
-            Object.keys(screens).forEach(screenName => {
-                this.screens.set(screenName, screens[screenName]);
+            // Fallback на базовые экраны - используем только основные экраны
+            const basicScreens = {
+                findRide: FindRideScreen,
+                myRides: MyRidesScreen,
+                createRide: CreateRideScreen,
+                profile: ProfileScreen,
+                rideResults: RideResultsScreen,
+                rideDetails: RideDetailsScreen,
+                driverProfile: DriverProfileScreen,
+                dateSelection: DateSelectionScreen,
+                timeSelection: TimeSelectionScreen,
+                chatScreen: ChatScreen,
+                uploadAvatar: UploadAvatarScreen,
+                uploadCarPhoto: UploadCarPhotoScreen,
+                editProfile: EditProfileScreen,
+                restricted: RestrictedScreen,
+                createRideSuccess: CreateRideSuccessScreen,
+                notificationSettings: NotificationSettingsScreen,
+                rating: RatingScreen,
+                loading: LoadingScreen
+            };
+            
+            Object.keys(basicScreens).forEach(screenName => {
+                this.screens.set(screenName, basicScreens[screenName]);
             });
         }
     }
