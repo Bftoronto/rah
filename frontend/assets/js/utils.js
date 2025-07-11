@@ -92,13 +92,13 @@ class ErrorHandler {
 
         Utils.showNotification('Ошибка', message, 'error');
     }
-}
+
 
 // Глобальный обработчик ошибок
 const errorHandler = new ErrorHandler();
 
 // Утилиты для валидации и обработки ошибок
-export const Utils = {
+const Utils = {
     // Валидация полей
     validateField: (value, rules) => {
         const errors = [];
@@ -536,6 +536,7 @@ export const Utils = {
 };
 
 // Экспорт для обратной совместимости
+export default Utils;
 export function showNotification(message, type = 'info', duration = 5000) {
     return Utils.showNotification('Уведомление', message, type, duration);
 }

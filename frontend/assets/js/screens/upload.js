@@ -1,6 +1,6 @@
 import { stateManager } from '../state.js';
 import { API } from '../api.js';
-import { Utils } from '../utils.js';
+import Utils from '../utils.js';
 
 class UploadAvatarScreen {
     constructor() {
@@ -401,5 +401,5 @@ class UploadDriverLicenseScreen {
     }
 }
 
+export { UploadAvatarScreen, UploadCarPhotoScreen, UploadDriverLicenseScreen };
 export default UploadAvatarScreen;
-export { UploadCarPhotoScreen, UploadDriverLicenseScreen }; 

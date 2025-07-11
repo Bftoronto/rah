@@ -6,9 +6,9 @@ import RideResultsScreen from './rideResults.js';
 import RideDetailsScreen from './rideDetails.js';
 import DriverProfileScreen from './driverProfile.js';
 
-import DateSelectionScreen, { TimeSelectionScreen } from './dateTimeSelection.js';
+import { DateSelectionScreen, TimeSelectionScreen } from './dateTimeSelection.js';
 import ChatScreen from './chat.js';
-import UploadAvatarScreen, { UploadCarPhotoScreen } from './upload.js';
+import { UploadAvatarScreen, UploadCarPhotoScreen } from './upload.js';
 import EditProfileScreen from './editProfile.js';
 import RestrictedScreen from './restricted.js';
 import CreateRideSuccessScreen from './success.js';

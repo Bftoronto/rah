@@ -1,6 +1,6 @@
 import { stateManager } from '../state.js';
 import { API } from '../api.js';
-import { Utils } from '../utils.js';
+import Utils from '../utils.js';
 
 // Экран поиска поездок
 class FindRideScreen {

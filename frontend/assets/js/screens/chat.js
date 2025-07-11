@@ -1,7 +1,7 @@
 import { stateManager } from '../state.js';
 import { wsManager } from '../websocket.js';
 import { API } from '../api.js';
-import { Utils } from '../utils.js';
+import Utils from '../utils.js';
 
 class ChatScreen {
     constructor() {
