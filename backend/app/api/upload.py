@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Request
 from sqlalchemy.orm import Session
 from typing import Optional
 import logging
@@ -27,7 +27,8 @@ async def upload_file(
     file: UploadFile = File(...),
     file_type: str = Form(..., description="Тип файла: avatar, license, car, document"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    request: Request = None
 ):
     """
     Универсальная загрузка файлов с улучшенной обработкой ошибок
@@ -42,6 +43,14 @@ async def upload_file(
         dict: Стандартизированный ответ
     """
     try:
+        # Проверка Content-Type (более гибкая)
+        if request is not None:
+            content_type = request.headers.get('content-type', '')
+            # Проверяем multipart/form-data или отсутствие Content-Type (браузер установит автоматически)
+            if content_type and not content_type.startswith('multipart/form-data'):
+                logger.warning(f"Неожиданный Content-Type: {content_type}")
+                # Не блокируем запрос, так как браузер может установить правильный Content-Type автоматически
+        
         logger.info(f"Загрузка файла типа {file_type} пользователем {current_user.id}")
         
         # Читаем данные файла

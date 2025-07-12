@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PAX - Поездки с попутчиками</title>
+    
+    <!-- Внешние зависимости -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- Стили приложения -->
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/components.css">
+    <link rel="stylesheet" href="assets/css/forms.css">
+    <link rel="stylesheet" href="assets/css/notifications.css">
+    <link rel="stylesheet" href="assets/css/modals.css">
+    <link rel="stylesheet" href="assets/css/rating.css">
+    
+    <!-- Error Boundary - загружаем первым для обработки ошибок -->
+    <script src="assets/js/utils/errorBoundary.js"></script>
+    
+    <!-- Мониторинг ошибок - исправленная версия -->
+    <script src="monitor_errors_fixed.js" type="module"></script>
+    
+    <style>
+        /* Дополнительные стили для совместимости */
+        .error-message {
+            color: #d32f2f;
+            font-size: 14px;
+            margin-top: 8px;
+            display: none;
+        }
+        
+        .form-control.error {
+            border-color: #d32f2f;
+            box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.1);
+        }
+        
+        .form-control.success {
+            border-color: #4caf50;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+        }
+        
+        .alert {
+            padding: 12px 16px;
+            border-radius: 18px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        
+        .alert-error {
+            background-color: #ffebee;
+            color: #d32f2f;
+            border: 1px solid #ffcdd2;
+        }
+        
+        .alert-success {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+        
+        .alert-warning {
+            background-color: #fff3e0;
+            color: #f57c00;
+            border: 1px solid #ffcc02;
+        }
+        
+        .alert-info {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #bbdefb;
+        }
+        
+        /* Баннеры */
+        .block-banner {
+            background: #faecec;
+            border-radius: 14px;
+            padding: 18px 20px 14px 20px;
+            margin-bottom: 20px;
+            position: relative;
+            border-left: 6px solid #f65446;
+        }
+        
+        .block-banner-title {
+            color: #f65446;
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .block-banner-text {
+            color: #333;
+            font-size: 17px;
+        }
+        
+        .warn-banner {
+            background: #fff7e6;
+            border-radius: 14px;
+            padding: 18px 20px 14px 20px;
+            margin-bottom: 20px;
+            position: relative;
+            border-left: 6px solid #fbc02d;
+        }
+        
+        .warn-banner-title {
+            color: #fbc02d;
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .warn-banner-text {
+            color: #333;
+            font-size: 17px;
+        }
+        
+        .info-banner {
+            background: #eaf2fa;
+            border-radius: 14px;
+            padding: 18px 20px 14px 20px;
+            margin-bottom: 20px;
+            position: relative;
+            border-left: 6px solid #4e89bf;
+            display: flex;
+            align-items: flex-start;
+        }
+        
+        .info-banner-title {
+            color: #4e89bf;
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .info-banner-text {
+            color: #333;
+            font-size: 17px;
+        }
+        
+        .info-banner-close {
+            position: absolute;
+            top: 14px;
+            right: 16px;
+            color: #4e89bf;
+            font-size: 22px;
+            font-weight: 400;
+            background: none;
+            border: none;
+            cursor: pointer;
+            line-height: 1;
+        }
+        
+        /* Карточки поездок */
+        .ride-card {
+            border-radius: 18px;
+            overflow: hidden;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            background: white;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .ride-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .ride-time {
+            background: #f8f9fa;
+            padding: 12px 16px;
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            font-size: 16px;
+        }
+        
+        .ride-location {
+            padding: 16px;
+            background: white;
+            position: relative;
+            padding-left: 32px;
+        }
+        
+        .ride-location:before {
+            content: "";
+            position: absolute;
+            left: 16px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #dadce0;
+        }
+        
+        .ride-location-dot {
+            position: absolute;
+            left: 10px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #f65446;
+            z-index: 1;
+        }
+        
+        .ride-location-dot.start {
+            top: 16px;
+        }
+        
+        .ride-location-dot.end {
+            bottom: 16px;
+        }
+        
+        .ride-location-text {
+            padding: 4px 0;
+            font-size: 14px;
+        }
+        
+        .location-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .ride-footer {
+            padding: 12px 16px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .driver-info {
+            display: flex;
+            align-items: center;
+        }
+        
+        .driver-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #e9ecef;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+            color: #5f6368;
+        }
+        
+        .ride-price {
+            font-weight: 500;
+            font-size: 18px;
+        }
+        
+        /* Экран ограничения доступа */
+        .access-restricted {
+            text-align: center;
+            padding: 30px 20px;
+        }
+        
+        .access-icon {
+            font-size: 48px;
+            color: #f65446;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Шапка -->
+        <div class="header">
+            <div class="header-title" id="headerTitle">PAX</div>
+        </div>
+        
+        <!-- Основной контент -->
+        <div class="content" id="appContent">
+            <!-- Контент будет динамически заменяться -->
+        </div>
+        
+        <!-- Нижнее меню -->
+        <div class="bottom-nav">
+            <div class="nav-item active" data-screen="find-ride">
+                <div class="nav-icon"><i class="fas fa-search"></i></div>
+                <div>Поиск</div>
+            </div>
+            <div class="nav-item" data-screen="my-rides">
+                <div class="nav-icon"><i class="fas fa-car"></i></div>
+                <div>Мои поездки</div>
+            </div>
+            <div class="nav-item" data-screen="create-ride">
+                <div class="nav-icon"><i class="fas fa-plus-circle"></i></div>
+                <div>Создать поездку</div>
+            </div>
+            <div class="nav-item" data-screen="profile">
+                <div class="nav-icon"><i class="fas fa-user"></i></div>
+                <div>Профиль</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальные окна -->
+    <div class="modal-overlay" id="imageModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Загрузка изображения</div>
+                <button class="modal-close" id="closeImageModal">&times;</button>
+            </div>
+            <div class="image-upload" id="imageUpload">
+                <input type="file" id="imageInput" accept="image/*">
+                <div class="upload-icon">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <div class="upload-text">
+                    Нажмите или перетащите изображение сюда<br>
+                    <small>JPG, PNG до 5MB</small>
+                </div>
+            </div>
+            <img class="image-preview" id="imagePreview">
+            <div class="upload-progress" id="uploadProgress">
+                <div class="upload-progress-bar" id="uploadProgressBar"></div>
+            </div>
+            <div class="d-flex justify-between mt-20">
+                <button class="btn btn-outline" id="cancelUpload">Отмена</button>
+                <button class="btn btn-primary" id="confirmUpload">Загрузить</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="chatModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Чат с водителем</div>
+                <button class="modal-close" id="closeChatModal">&times;</button>
+            </div>
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Сообщения будут добавляться динамически -->
+                </div>
+                <div class="chat-input-container">
+                    <textarea class="chat-input" id="chatInput" placeholder="Введите сообщение..." rows="1"></textarea>
+                    <button class="send-btn" id="sendMessage" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно отмены поездки -->
+    <div id="cancelModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="modal-close" id="closeCancelModal">&times;</button>
+                <div class="modal-title">Отмена бронирования</div>
+            </div>
+            <div class="modal-body">
+                <div class="form-label">Причина отмены</div>
+                <div class="cancel-reasons" id="cancelReasons">
+                    <button class="reason-btn" data-reason="Забронировал по ошибке">Забронировал по ошибке</button>
+                    <button class="reason-btn" data-reason="Нет связи с водителем/пассажиром">Нет связи с водителем/пассажиром</button>
+                    <button class="reason-btn" data-reason="Требует предоплату">Требует предоплату</button>
+                    <button class="reason-btn" data-reason="Завышает цену">Завышает цену</button>
+                    <button class="reason-btn" data-reason="Условия поездки изменились">Условия поездки изменились</button>
+                    <button class="reason-btn" data-reason="На фото другая машина и номер">На фото другая машина и номер</button>
+                </div>
+                <div class="form-label mt-20">Комментарий</div>
+                <textarea id="cancelComment" class="cancel-comment" placeholder="Можете описать причину подробнее"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary w-100" id="confirmCancelBtn" disabled>Отменить бронирование</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Уведомления -->
+    <div id="notifications"></div>
+
+    <!-- Скрипты приложения -->
+    <script type="module" src="assets/js/app.js"></script>
+</body>
+</html> 

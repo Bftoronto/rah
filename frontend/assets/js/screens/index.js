@@ -79,5 +79,5 @@ export async function getAllScreens() {
     return { ...screens, ...registrationScreens };
 }
 
-// Экспортируем как именованный экспорт вместо default
-export { screens as default }; 
+// Экспортируем базовые экраны для fallback
+export { screens };

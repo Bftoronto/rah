@@ -29,6 +29,15 @@
 - CORS и HTTPS поддерживаются
 - Поддержка Telegram Login и Mini App
 
+## Мониторинг и метрики
+
+Для работы эндпоинта `/api/metrics` требуется пакет `psutil`.
+Установите зависимости из requirements.txt:
+
+```
+pip install -r requirements.txt
+```
+
 ---
 
 **Вся структура и код соответствуют фронтенду и требованиям Telegram Mini App.** 

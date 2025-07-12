@@ -2,7 +2,13 @@
 Модуль для сбора метрик приложения
 """
 import time
-import psutil
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
+    psutil = None
+
 from typing import Dict, Any, Optional
 from ..utils.logger import get_logger
 
@@ -33,11 +39,11 @@ class MetricsCollector:
         """Обновить системные метрики"""
         try:
             # Используем psutil если доступен, иначе альтернативный способ
-            try:
+            if PSUTIL_AVAILABLE and psutil:
                 process = psutil.Process()
                 self.metrics["memory_usage"] = process.memory_info().rss / 1024 / 1024  # МБ
                 self.metrics["cpu_usage"] = process.cpu_percent()
-            except ImportError:
+            else:
                 # Альтернативный способ без psutil
                 try:
                     with open('/proc/self/status', 'r') as f:

@@ -1,54 +1,42 @@
-# Dependencies
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
 
-# Coverage directory used by tools like istanbul
-coverage/
-
-# nyc test coverage
-.nyc_output
-
-# Grunt intermediate storage
-.grunt
-
-# Bower dependency directory
-bower_components
-
-# node-waf configuration
-.lock-wscript
-
-# Compiled binary addons
-build/Release
-
-# Dependency directories
-jspm_packages/
-
-# Optional npm cache directory
-.npm
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# dotenv environment variables file
+# Environment variables
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*
 
 # IDE files
 .vscode/
@@ -56,6 +44,9 @@ jspm_packages/
 *.swp
 *.swo
 *~
+.project
+.pydevproject
+.settings/
 
 # OS generated files
 .DS_Store
@@ -65,74 +56,96 @@ jspm_packages/
 .Trashes
 ehthumbs.db
 Thumbs.db
+desktop.ini
 
 # Logs
-logs
+logs/
 *.log
+*.log.*
+app.log
+error.log
+access.log
 
 # Temporary files
 tmp/
 temp/
+*.tmp
+*.temp
 
 # Build outputs
 dist/
 build/
+*.tar.gz
+*.zip
 
 # SSL certificates
 *.pem
 *.key
 *.crt
+*.csr
+*.srl
 
 # SSH keys
 *.pem
 id_rsa
 id_rsa.pub
+*.ppk
 
-# Deployment files
-deploy.sh
-start-ngrok.sh
-
-# Local configuration
-config.local.js
-.env.local
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-venv/
-.env
-
-# macOS
-.DS_Store
-
-# Node
-node_modules/
-
-# Frontend build
-/dist/
-/build/
+# Database
+*.sqlite3
+*.db
+*.sql
 
 # Alembic
 backend/migrations/versions/
-
-# SQLite
-*.sqlite3
+migrations/__pycache__/
 
 # Coverage
 .coverage
 htmlcov/
 .pytest_cache/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
 
-# VSCode
-.vscode/
+# Node.js (if any frontend build tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
 
-# Backend env
-backend/.env
+# Frontend build
+/dist/
+/build/
+/public/
 
-# Logs
-*.log
+# Deployment files
+deploy.sh
+start-ngrok.sh
+*.backup
+
+# Local configuration
+config.local.js
+.env.local
+
+# Telegram
+telegram.log
+*.session
+*.session-journal
+
+# Mini App
+TELEGRAM_MINIAPP_SETUP.md
+
+# Backup files
+*.backup
+*.bak
+*.old
 
 # System
 Thumbs.db
@@ -162,4 +175,27 @@ backend/app.log
 
 # Локальные настройки
 backend/.env
-.env 
+.env
+
+# Uploads (keep structure but ignore content)
+uploads/*
+!uploads/.gitkeep
+
+# Database dumps
+*.sql
+*.dump
+
+# Redis dumps
+dump.rdb
+
+# Monitoring
+prometheus_data/
+grafana_data/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Local development
+local_settings.py
+local_config.py 

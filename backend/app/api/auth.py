@@ -10,7 +10,7 @@ from ..database import get_db
 from ..services.auth_service import AuthService
 from ..schemas.user import UserCreate, UserUpdate, UserRead, PrivacyPolicyAccept
 from ..models.user import User
-from ..schemas.telegram import TelegramWebAppData, TelegramVerificationRequest, TelegramAuthRequest, TelegramRefreshRequest
+from ..schemas.telegram import TelegramWebAppData, TelegramVerificationRequest, TelegramAuthRequest, TelegramRefreshRequest, TelegramUserData
 from ..utils.security import verify_telegram_data, extract_telegram_user_data
 from ..utils.jwt_auth import get_current_user_optional, require_auth, require_driver, require_verified_user
 from ..schemas.responses import create_success_response, create_error_response, create_validation_error_response
@@ -21,35 +21,52 @@ router = APIRouter()
 
 @router.post('/telegram/verify', response_model=dict)
 async def verify_telegram_user(request: Request, db: Session = Depends(get_db)):
-    """Верификация пользователя через Telegram Web App с поддержкой разных форматов данных"""
+    """Верификация пользователя через Telegram с унифицированной структурой данных"""
     try:
-        # Получаем и валидируем данные из запроса
         raw_data = await request.json()
+        logger.info(f"Получены данные Telegram: {raw_data}")
         
-        # Пытаемся валидировать через разные схемы
-        telegram_data = None
+        # Унифицированная обработка данных от фронтенда
         user_data = None
+        telegram_data = None
         
-        # Сначала пробуем новую схему для совместимости с фронтендом
-        try:
-            auth_request = TelegramAuthRequest(**raw_data)
-            telegram_data = auth_request.dict()
-            user_data = auth_request.user.dict()
-            logger.info(f"Использована схема TelegramAuthRequest для пользователя: {auth_request.user.id}")
-        except ValidationError:
-            # Если не подходит, пробуем старую схему
+        # Проверяем структуру данных от фронтенда
+        if 'user' in raw_data and isinstance(raw_data['user'], dict):
+            # Структура от фронтенда: {user: {...}, auth_date: ..., hash: ...}
             try:
-                webapp_data = TelegramWebAppData(**raw_data)
-                telegram_data = webapp_data.dict()
-                user_data = webapp_data.user.dict()
-                logger.info(f"Использована схема TelegramWebAppData для пользователя: {webapp_data.user.id}")
+                auth_request = TelegramAuthRequest(**raw_data)
+                telegram_data = auth_request.dict()
+                user_data = auth_request.user.dict()
             except ValidationError as e:
-                logger.warning(f"Валидация данных Telegram не прошла: {e}")
+                logger.error(f"Ошибка валидации TelegramAuthRequest: {e}")
                 return create_validation_error_response(
-                    field_errors={'telegram_data': [f"Некорректные данные Telegram: {str(e)}"]},
+                    field_errors={'telegram_data': [f"Некорректная структура данных: {str(e)}"]},
                     message="Ошибка валидации данных Telegram",
                     request_id=str(uuid.uuid4())
                 )
+        else:
+            # Старая структура или прямая структура пользователя
+            try:
+                # Пытаемся обработать как прямые данные пользователя
+                user_data = TelegramUserData(**raw_data).dict()
+                telegram_data = {
+                    'user': user_data,
+                    'auth_date': raw_data.get('auth_date'),
+                    'hash': raw_data.get('hash')
+                }
+            except ValidationError:
+                try:
+                    # Пытаемся обработать как WebApp данные
+                    webapp_data = TelegramWebAppData(**raw_data)
+                    telegram_data = webapp_data.dict()
+                    user_data = webapp_data.user.dict()
+                except ValidationError as e:
+                    logger.error(f"Ошибка валидации всех форматов Telegram данных: {e}")
+                    return create_validation_error_response(
+                        field_errors={'telegram_data': [f"Некорректные данные Telegram: {str(e)}"]},
+                        message="Ошибка валидации данных Telegram",
+                        request_id=str(uuid.uuid4())
+                    )
         
         # Извлекаем Telegram ID
         telegram_id = str(user_data.get('id'))

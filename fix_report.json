@@ -1,0 +1,22 @@
+{
+  "timestamp": "2025-07-11T14:18:44.323516",
+  "total_fixes": 14,
+  "total_errors": 0,
+  "fixes_applied": [
+    "Исправлен backend/app/config/settings.py",
+    "Исправлен backend/render.yaml",
+    "Исправлен backend/render.yaml",
+    "Исправлен backend/docker-compose.yml",
+    "Исправлен frontend/_redirects",
+    "Исправлен frontend/assets/js/websocket.js",
+    "Исправлен frontend/assets/js/app.js",
+    "Исправлен backend/app/config/settings.py",
+    "Исправлен backend/app/utils/telegram.py",
+    "Исправлен backend/app/utils/telegram_validator.py",
+    "Исправлен backend/app/utils/security.py",
+    "Исправлен backend/app/utils/security_enhanced.py",
+    "Исправлен backend/docker-compose.yml",
+    "Исправлен CORS в backend/app/main.py"
+  ],
+  "errors": []
+}

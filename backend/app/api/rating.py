@@ -13,6 +13,7 @@ from app.utils.security import get_current_user_id
 router = APIRouter(prefix="/rating", tags=["rating"])
 
 @router.post("/", response_model=RatingResponse)
+@router.post("", response_model=RatingResponse)
 def create_rating(
     rating_data: RatingCreate,
     current_user_id: int = Depends(get_current_user_id),
@@ -29,6 +30,7 @@ def create_rating(
         raise HTTPException(status_code=500, detail="Ошибка создания рейтинга")
 
 @router.post("/review", response_model=ReviewResponse)
+@router.post("/review/", response_model=ReviewResponse)
 def create_review(
     review_data: ReviewCreate,
     current_user_id: int = Depends(get_current_user_id),
@@ -45,6 +47,7 @@ def create_review(
         raise HTTPException(status_code=500, detail="Ошибка создания отзыва")
 
 @router.put("/{rating_id}", response_model=RatingResponse)
+@router.put("/{rating_id}/", response_model=RatingResponse)
 def update_rating(
     rating_id: int,
     rating_data: RatingUpdate,
@@ -62,6 +65,7 @@ def update_rating(
         raise HTTPException(status_code=500, detail="Ошибка обновления рейтинга")
 
 @router.delete("/{rating_id}")
+@router.delete("/{rating_id}/")
 def delete_rating(
     rating_id: int,
     current_user_id: int = Depends(get_current_user_id),
@@ -78,6 +82,7 @@ def delete_rating(
         raise HTTPException(status_code=500, detail="Ошибка удаления рейтинга")
 
 @router.get("/user/{user_id}", response_model=UserRatingsResponse)
+@router.get("/user/{user_id}/", response_model=UserRatingsResponse)
 def get_user_ratings(
     user_id: int,
     page: int = Query(1, ge=1, description="Номер страницы"),
@@ -92,6 +97,7 @@ def get_user_ratings(
         raise HTTPException(status_code=500, detail="Ошибка получения рейтингов")
 
 @router.get("/user/{user_id}/reviews", response_model=UserReviewsResponse)
+@router.get("/user/{user_id}/reviews/", response_model=UserReviewsResponse)
 def get_user_reviews(
     user_id: int,
     page: int = Query(1, ge=1, description="Номер страницы"),
@@ -106,6 +112,7 @@ def get_user_reviews(
         raise HTTPException(status_code=500, detail="Ошибка получения отзывов")
 
 @router.get("/user/{user_id}/summary", response_model=UserRatingSummary)
+@router.get("/user/{user_id}/summary/", response_model=UserRatingSummary)
 def get_user_rating_summary(
     user_id: int,
     db: Session = Depends(get_db)
@@ -118,6 +125,7 @@ def get_user_rating_summary(
         raise HTTPException(status_code=500, detail="Ошибка получения сводки рейтингов")
 
 @router.get("/ride/{ride_id}", response_model=RideRatingsResponse)
+@router.get("/ride/{ride_id}/", response_model=RideRatingsResponse)
 def get_ride_ratings(
     ride_id: int,
     db: Session = Depends(get_db)
@@ -143,6 +151,7 @@ def get_ride_ratings(
         raise HTTPException(status_code=500, detail="Ошибка получения рейтингов поездки")
 
 @router.get("/top", response_model=List[TopUserResponse])
+@router.get("/top/", response_model=List[TopUserResponse])
 def get_top_users(
     limit: int = Query(10, ge=1, le=50, description="Количество пользователей"),
     db: Session = Depends(get_db)
@@ -155,6 +164,7 @@ def get_top_users(
         raise HTTPException(status_code=500, detail="Ошибка получения топ пользователей")
 
 @router.get("/statistics", response_model=RatingStatisticsResponse)
+@router.get("/statistics/", response_model=RatingStatisticsResponse)
 def get_rating_statistics(
     db: Session = Depends(get_db)
 ):
@@ -166,6 +176,7 @@ def get_rating_statistics(
         raise HTTPException(status_code=500, detail="Ошибка получения статистики")
 
 @router.get("/my/ratings", response_model=UserRatingsResponse)
+@router.get("/my/ratings/", response_model=UserRatingsResponse)
 def get_my_ratings(
     page: int = Query(1, ge=1, description="Номер страницы"),
     limit: int = Query(10, ge=1, le=50, description="Количество записей на странице"),
@@ -180,6 +191,7 @@ def get_my_ratings(
         raise HTTPException(status_code=500, detail="Ошибка получения рейтингов")
 
 @router.get("/my/reviews", response_model=UserReviewsResponse)
+@router.get("/my/reviews/", response_model=UserReviewsResponse)
 def get_my_reviews(
     page: int = Query(1, ge=1, description="Номер страницы"),
     limit: int = Query(10, ge=1, le=50, description="Количество записей на странице"),
@@ -194,6 +206,7 @@ def get_my_reviews(
         raise HTTPException(status_code=500, detail="Ошибка получения отзывов")
 
 @router.get("/my/summary", response_model=UserRatingSummary)
+@router.get("/my/summary/", response_model=UserRatingSummary)
 def get_my_rating_summary(
     current_user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db)

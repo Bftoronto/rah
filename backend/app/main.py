@@ -8,7 +8,7 @@ import time
 
 from .config.settings import get_settings, settings
 from .database import init_db, check_db_connection
-from .api import auth, rides, profile, chat, upload, notifications, moderation, rating, monitoring
+from .api import auth, rides, profile, chat, upload, notifications, moderation, rating, monitoring, cache
 from .middleware.performance import PerformanceMiddleware, MemoryMonitor
 from .middleware.rate_limit import rate_limit_middleware
 from .utils.logger import get_logger, performance_logger
@@ -35,7 +35,7 @@ app.middleware("http")(rate_limit_middleware)
 # Настройка CORS для Telegram Web App
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
+    allow_origins = [
         "https://web.telegram.org",
         "https://t.me",
         "http://localhost:3000",
@@ -89,6 +89,9 @@ app.include_router(notifications.router, prefix="/api/notifications", tags=["not
 app.include_router(moderation.router, prefix="/api/moderation", tags=["moderation"])
 app.include_router(rating.router, prefix="/api/rating", tags=["rating"])
 app.include_router(monitoring.router, prefix="/api/monitoring", tags=["monitoring"])
+
+# Подключение кэш API
+app.include_router(cache.router, prefix="/api/cache", tags=["cache"])
 
 @app.on_event("startup")
 async def startup_event():
@@ -212,29 +215,52 @@ async def get_metrics():
         memory_usage = MemoryMonitor.get_memory_usage()
         
         # Получаем информацию о системе
-        import psutil
-        cpu_percent = psutil.cpu_percent(interval=1)
-        disk_usage = psutil.disk_usage('/')
-        
-        return {
-            "timestamp": time.time(),
-            "memory": {
-                "usage_mb": round(memory_usage, 2),
-                "available_mb": round(psutil.virtual_memory().available / 1024 / 1024, 2)
-            },
-            "cpu": {
-                "usage_percent": cpu_percent
-            },
-            "disk": {
-                "total_gb": round(disk_usage.total / 1024 / 1024 / 1024, 2),
-                "used_gb": round(disk_usage.used / 1024 / 1024 / 1024, 2),
-                "free_gb": round(disk_usage.free / 1024 / 1024 / 1024, 2)
-            },
-            "app": {
-                "version": settings.version,
-                "debug": settings.debug
+        try:
+            import psutil
+            cpu_percent = psutil.cpu_percent(interval=1)
+            disk_usage = psutil.disk_usage('/')
+            
+            return {
+                "timestamp": time.time(),
+                "memory": {
+                    "usage_mb": round(memory_usage, 2),
+                    "available_mb": round(psutil.virtual_memory().available / 1024 / 1024, 2)
+                },
+                "cpu": {
+                    "usage_percent": cpu_percent
+                },
+                "disk": {
+                    "total_gb": round(disk_usage.total / 1024 / 1024 / 1024, 2),
+                    "used_gb": round(disk_usage.used / 1024 / 1024 / 1024, 2),
+                    "free_gb": round(disk_usage.free / 1024 / 1024 / 1024, 2)
+                },
+                "app": {
+                    "version": settings.version,
+                    "debug": settings.debug
+                }
             }
-        }
+        except ImportError:
+            # Если psutil недоступен, возвращаем базовую информацию
+            return {
+                "timestamp": time.time(),
+                "memory": {
+                    "usage_mb": round(memory_usage, 2),
+                    "available_mb": 0
+                },
+                "cpu": {
+                    "usage_percent": 0
+                },
+                "disk": {
+                    "total_gb": 0,
+                    "used_gb": 0,
+                    "free_gb": 0
+                },
+                "app": {
+                    "version": settings.version,
+                    "debug": settings.debug
+                },
+                "note": "psutil not available - limited metrics"
+            }
         
     except Exception as e:
         logger.error("Ошибка получения метрик", {"error": str(e)})

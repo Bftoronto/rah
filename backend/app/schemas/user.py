@@ -152,10 +152,11 @@ class UserUpdate(BaseModel):
 
 class UserRead(UserBase):
     id: int
-    name: Optional[str] = Field(None, alias="full_name")  # Алиас для full_name
+    # Прямые поля для совместимости с фронтендом
+    name: Optional[str] = None  # Прямое поле вместо алиаса
     balance: int = 500  # Для совместимости с фронтендом
     reviews: int = 0  # Для совместимости с фронтендом
-    avatar: Optional[str] = Field(None, alias="avatar_url")  # Алиас для avatar_url
+    avatar: Optional[str] = None  # Прямое поле вместо алиаса
     verified: dict = {}  # Для совместимости с фронтендом
     car: dict = {}  # Для совместимости с фронтендом
     is_active: bool
@@ -174,14 +175,53 @@ class UserRead(UserBase):
     created_at: datetime
     updated_at: datetime
     average_rating: float = 0.0
-    rating: int = Field(0, alias="average_rating")  # Алиас для average_rating
+    rating: int = 0  # Прямое поле для совместимости
     total_rides: int
     cancelled_rides: int
     profile_history: Optional[list] = []
 
+    @root_validator(pre=True)
+    def set_compatibility_fields(cls, values):
+        """Устанавливает поля для совместимости с фронтендом"""
+        # Копируем full_name в name
+        if 'full_name' in values and values['full_name']:
+            values['name'] = values['full_name']
+        
+        # Копируем avatar_url в avatar
+        if 'avatar_url' in values and values['avatar_url']:
+            values['avatar'] = values['avatar_url']
+        
+        # Устанавливаем verified на основе is_verified
+        if 'is_verified' in values:
+            values['verified'] = {
+                'status': values['is_verified'],
+                'verified_at': values.get('created_at')
+            }
+        
+        # Устанавливаем car на основе данных автомобиля
+        car_data = {}
+        if values.get('car_brand'):
+            car_data['brand'] = values['car_brand']
+        if values.get('car_model'):
+            car_data['model'] = values['car_model']
+        if values.get('car_year'):
+            car_data['year'] = values['car_year']
+        if values.get('car_color'):
+            car_data['color'] = values['car_color']
+        if values.get('car_photo_url'):
+            car_data['photo'] = values['car_photo_url']
+        
+        values['car'] = car_data
+        
+        # Устанавливаем rating на основе average_rating
+        if 'average_rating' in values:
+            values['rating'] = int(values['average_rating'])
+        
+        return values
+
     class Config:
         from_attributes = True
-        populate_by_name = True  # Позволяет использовать алиасы
+        populate_by_name = True
         validate_by_name = True
 
 class PrivacyPolicyAccept(BaseModel):

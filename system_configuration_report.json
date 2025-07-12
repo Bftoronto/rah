@@ -1,0 +1,42 @@
+{
+  "timestamp": "2025-07-11T14:18:48.418934",
+  "total_issues": 16,
+  "total_warnings": 0,
+  "issues": [
+    "Несоответствие в backend/render.yaml",
+    "Несоответствие пароля в backend/render.yaml",
+    "Несоответствие URL в backend/render.yaml",
+    "Несоответствие URL в backend/docker-compose.yml",
+    "Несоответствие Frontend URL в frontend/_redirects",
+    "Несоответствие Frontend URL в frontend/assets/js/websocket.js",
+    "Несоответствие Frontend URL в frontend/assets/js/app.js",
+    "Несоответствие Bot Username в backend/app/config/settings.py",
+    "Несоответствие Bot Username в backend/app/utils/telegram.py",
+    "Несоответствие Bot Username в backend/app/utils/telegram_validator.py",
+    "Несоответствие Bot Username в backend/app/utils/security.py",
+    "Несоответствие Bot Token в backend/app/utils/security_enhanced.py",
+    "Несоответствие Bot Username в backend/app/utils/security_enhanced.py",
+    "Несоответствие Bot Username в backend/docker-compose.yml",
+    "CORS не настроен для Telegram Web App",
+    "Проблема с API endpoint /api/auth/telegram/verify: 405"
+  ],
+  "warnings": [],
+  "expected_config": {
+    "database": {
+      "url": "postgresql://paxmain_user:IUwzoIuzbKG9RuruiHSxBFTllTwaK4DN@dpg-d1lu8jnfte5s73dv6780-a/paxmain",
+      "password": "IUwzoIuzbKG9RuruiHSxBFTllTwaK4DN"
+    },
+    "backend": {
+      "url": "https://pax-backend-2gng.onrender.com/",
+      "health_endpoint": "https://pax-backend-2gng.onrender.com/health"
+    },
+    "frontend": {
+      "url": "https://frabjous-florentine-c506b0.netlify.app/",
+      "api_redirect": "https://pax-backend-2gng.onrender.com/api/"
+    },
+    "telegram_bot": {
+      "username": "@paxdemobot",
+      "token": "8187393599:AAEudOluahmhNJixt_hW8mvWjWC0eh1YIlA"
+    }
+  }
+}

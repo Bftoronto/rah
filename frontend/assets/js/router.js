@@ -1,6 +1,6 @@
 import { stateManager } from './state.js';
 import Utils from './utils.js';
-import screens, { getAllScreens } from './screens/index.js';
+import { getAllScreens } from './screens/index.js';
 
 // Импорты для fallback экранов
 import FindRideScreen from './screens/findRide.js';

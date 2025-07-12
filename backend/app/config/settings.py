@@ -39,23 +39,23 @@ class Settings(BaseSettings):
     log_format: str = Field(default="json", env="LOG_FORMAT")
     
     # База данных
-    database_url: str = Field(env="DATABASE_URL")
+    database_url: str = Field(default="postgresql://paxmain_user:IUwzoIuzbKG9RuruiHSxBFTllTwaK4DN@dpg-d1lu8jnfte5s73dv6780-a/paxmain", env="DATABASE_URL")
     database_pool_size: int = Field(default=10, env="DATABASE_POOL_SIZE")
     database_max_overflow: int = Field(default=20, env="DATABASE_MAX_OVERFLOW")
     
     # Безопасность
     secret_key: str = Field(env="SECRET_KEY")
-    jwt_secret_key: str = Field(env="JWT_SECRET_KEY", default="your-super-secret-jwt-key-change-in-production")
+    jwt_secret_key: str = Field(env="JWT_SECRET_KEY", default="IUwzoIuzbKG9RuruiHSxBFTllTwaK4DN")
     algorithm: str = Field(default="HS256", env="ALGORITHM")
     access_token_expire_minutes: int = Field(default=30, env="ACCESS_TOKEN_EXPIRE_MINUTES")
     refresh_token_expire_days: int = Field(default=7, env="REFRESH_TOKEN_EXPIRE_DAYS")
     
     # Telegram
-    telegram_bot_token: str = Field(env="TELEGRAM_BOT_TOKEN")
-    telegram_bot_username: Optional[str] = Field(default=None, env="TELEGRAM_BOT_USERNAME")
+    telegram_bot_token: str = Field(default="8187393599:AAEudOluahmhNJixt_hW8mvWjWC0eh1YIlA", env="TELEGRAM_BOT_TOKEN")
+    telegram_bot_username: str = Field(default="@paxdemobot", env="TELEGRAM_BOT_USERNAME")
     telegram_webhook_url: Optional[str] = Field(default=None, env="TELEGRAM_WEBHOOK_URL")
     
-    # Файлы
+    # Загрузка файлов
     upload_dir: str = Field(default="uploads", env="UPLOAD_DIR")
     max_file_size: int = Field(default=10 * 1024 * 1024, env="MAX_FILE_SIZE")  # 10MB
     allowed_file_types: Optional[str] = Field(default="image/jpeg,image/png,image/gif", env="ALLOWED_FILE_TYPES")
