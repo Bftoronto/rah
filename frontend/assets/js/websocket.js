@@ -11,20 +11,21 @@ class WebSocketManager {
         this.heartbeatInterval = null;
         this.messageQueue = [];
         this.isConnected = false;
-        this.userId = null;
+        this.user_id = null;
         this.onMessageCallback = null;
         this.onStatusChangeCallback = null;
     }
 
     // Подключение к WebSocket
-    connect(userId, onMessage = null, onStatusChange = null) {
-        this.userId = userId;
+    connect(user_id, onMessage = null, onStatusChange = null) {
+        this.user_id = user_id;
         this.onMessageCallback = onMessage;
         this.onStatusChangeCallback = onStatusChange;
 
         const wsUrl = this.getWebSocketUrl();
         
         try {
+            console.log('Подключение к WebSocket:', wsUrl);
             this.ws = new WebSocket(wsUrl);
             this.setupEventHandlers();
         } catch (error) {
@@ -33,13 +34,17 @@ class WebSocketManager {
         }
     }
 
-    // Получение WebSocket URL
+    /**
+     * Генерирует WebSocket URL для пользователя
+     * @returns {string} WebSocket URL
+     */
     getWebSocketUrl() {
+        // Используем продакшен URL для всех случаев, кроме локальной разработки
         const baseURL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
             ? 'ws://localhost:8000'
             : 'wss://pax-backend-2gng.onrender.com';
         
-        return `${baseURL}/api/chat/ws/${this.userId}`;
+        return `${baseURL}/api/chat/ws/${this.user_id}`;
     }
 
     // Настройка обработчиков событий
@@ -74,15 +79,27 @@ class WebSocketManager {
                 this.onStatusChangeCallback('disconnected');
             }
 
-            // Попытка переподключения
+            // Попытка переподключения только если это не было намеренное закрытие
             if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+                console.log('Планирование переподключения после неожиданного закрытия');
                 this.scheduleReconnect();
+            } else if (event.code === 1000) {
+                console.log('Соединение закрыто пользователем');
             }
         };
 
         this.ws.onerror = (error) => {
             console.error('WebSocket ошибка:', error);
             this.handleConnectionError(error);
+            
+            // Показываем уведомление только если соединение еще не установлено
+            if (!this.isConnected) {
+                Utils.showNotification(
+                    'Ошибка подключения к чату', 
+                    'Проверьте подключение к интернету', 
+                    'error'
+                );
+            }
         };
     }
 
@@ -221,7 +238,7 @@ class WebSocketManager {
         
         setTimeout(() => {
             if (!this.isConnected) {
-                this.connect(this.userId, this.onMessageCallback, this.onStatusChangeCallback);
+                this.connect(this.user_id, this.onMessageCallback, this.onStatusChangeCallback);
             }
         }, delay);
     }
@@ -230,8 +247,26 @@ class WebSocketManager {
     handleConnectionError(error) {
         console.error('Ошибка WebSocket соединения:', error);
         
+        // Показываем уведомление пользователю
+        Utils.showNotification(
+            'Ошибка подключения к чату', 
+            'Не удалось подключиться к чату. Попытка переподключения...', 
+            'warning'
+        );
+        
         if (this.onStatusChangeCallback) {
             this.onStatusChangeCallback('error');
+        }
+        
+        // Планируем переподключение
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+            this.scheduleReconnect();
+        } else {
+            Utils.showNotification(
+                'Чат недоступен', 
+                'Не удалось подключиться к чату после нескольких попыток', 
+                'error'
+            );
         }
     }
 

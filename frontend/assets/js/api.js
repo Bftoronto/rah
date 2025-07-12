@@ -128,102 +128,162 @@ class ApiError extends Error {
 class CacheManager {
     constructor() {
         this.cache = new Map();
-        this.ttl = 5 * 60 * 1000; // 5 минут
-        this.maxSize = 100; // Максимальное количество элементов
-        this.stats = {
-            hits: 0,
-            misses: 0,
-            sets: 0,
-            deletes: 0
-        };
+        this.defaultTTL = 5 * 60 * 1000; // 5 минут
+        this.cleanupInterval = setInterval(() => this.cleanup(), 60000); // Очистка каждую минуту
     }
 
     get(key) {
         const item = this.cache.get(key);
-        if (item && Date.now() - item.timestamp < this.ttl) {
-            this.stats.hits++;
+        if (item && Date.now() < item.expiresAt) {
             return item.data;
         }
-        this.cache.delete(key);
-        this.stats.misses++;
+        if (item) {
+            this.cache.delete(key);
+        }
         return null;
     }
 
     set(key, data, customTtl = null) {
-        // Очищаем старые записи если достигли лимита
-        if (this.cache.size >= this.maxSize) {
-            const oldestKey = this.cache.keys().next().value;
-            this.cache.delete(oldestKey);
-            this.stats.deletes++;
-        }
-        
+        const ttl = customTtl || this.defaultTTL;
         this.cache.set(key, {
-            data,
-            timestamp: Date.now(),
-            ttl: customTtl || this.ttl
+            data: data,
+            expiresAt: Date.now() + ttl,
+            createdAt: Date.now()
         });
-        this.stats.sets++;
     }
 
     clear() {
         this.cache.clear();
-        this.stats = {
-            hits: 0,
-            misses: 0,
-            sets: 0,
-            deletes: 0
-        };
     }
 
     invalidate(pattern) {
-        let deletedCount = 0;
-        for (const key of this.cache.keys()) {
+        for (const [key] of this.cache) {
             if (key.includes(pattern)) {
                 this.cache.delete(key);
-                deletedCount++;
             }
         }
-        this.stats.deletes += deletedCount;
     }
 
     getStats() {
-        const totalRequests = this.stats.hits + this.stats.misses;
-        const hitRate = totalRequests > 0 ? (this.stats.hits / totalRequests) * 100 : 0;
-        
+        const now = Date.now();
+        let total = 0;
+        let expired = 0;
+        let active = 0;
+
+        for (const [key, item] of this.cache) {
+            total++;
+            if (now >= item.expiresAt) {
+                expired++;
+            } else {
+                active++;
+            }
+        }
+
         return {
-            size: this.cache.size,
-            maxSize: this.maxSize,
-            ttl: this.ttl,
-            hitRate: Math.round(hitRate),
-            hits: this.stats.hits,
-            misses: this.stats.misses,
-            sets: this.stats.sets,
-            deletes: this.stats.deletes
+            total,
+            expired,
+            active,
+            size: this.cache.size
         };
     }
 
-    // Очистка устаревших записей
     cleanup() {
         const now = Date.now();
-        let cleanedCount = 0;
-        
-        for (const [key, item] of this.cache.entries()) {
-            if (now - item.timestamp > item.ttl) {
+        for (const [key, item] of this.cache) {
+            if (now >= item.expiresAt) {
                 this.cache.delete(key);
-                cleanedCount++;
             }
         }
-        
-        this.stats.deletes += cleanedCount;
-        return cleanedCount;
     }
 
-    // Установка TTL для разных типов данных
     setTTL(key, ttl) {
         const item = this.cache.get(key);
         if (item) {
-            item.ttl = ttl;
+            item.expiresAt = Date.now() + ttl;
         }
+    }
+
+    // Новые методы для синхронизации с бэкендом
+    async syncWithBackend() {
+        try {
+            const response = await API.request('/api/cache/stats', { method: 'GET' });
+            if (response.success) {
+                console.log('Кэш синхронизирован с бэкендом:', response.data);
+                return response.data;
+            }
+        } catch (error) {
+            console.error('Ошибка синхронизации кэша:', error);
+        }
+        return null;
+    }
+
+    async invalidateBackend(pattern = null) {
+        try {
+            const body = pattern ? { pattern } : {};
+            const response = await API.request('/api/cache/invalidate', {
+                method: 'POST',
+                body: JSON.stringify(body)
+            });
+            if (response.success) {
+                console.log('Кэш бэкенда инвалидирован');
+                // Также инвалидируем локальный кэш
+                this.invalidate(pattern);
+            }
+        } catch (error) {
+            console.error('Ошибка инвалидации кэша бэкенда:', error);
+        }
+    }
+
+    async clearBackend() {
+        try {
+            const response = await API.request('/api/cache/clear', { method: 'DELETE' });
+            if (response.success) {
+                console.log('Кэш бэкенда очищен');
+                // Также очищаем локальный кэш
+                this.clear();
+            }
+        } catch (error) {
+            console.error('Ошибка очистки кэша бэкенда:', error);
+        }
+    }
+
+    // Метод для синхронизации при изменении данных
+    async syncOnDataChange(operation, endpoint) {
+        try {
+            // Инвалидируем связанные кэши
+            const patterns = this.getInvalidationPatterns(operation, endpoint);
+            for (const pattern of patterns) {
+                await this.invalidateBackend(pattern);
+            }
+        } catch (error) {
+            console.error('Ошибка синхронизации кэша при изменении данных:', error);
+        }
+    }
+
+    // Определение паттернов инвалидации для разных операций
+    getInvalidationPatterns(operation, endpoint) {
+        const patterns = [];
+        
+        switch (operation) {
+            case 'CREATE':
+            case 'UPDATE':
+            case 'DELETE':
+                if (endpoint.includes('/rides')) {
+                    patterns.push('rides', 'my_rides');
+                }
+                if (endpoint.includes('/profile')) {
+                    patterns.push('user_data');
+                }
+                if (endpoint.includes('/rating')) {
+                    patterns.push('ratings', 'reviews');
+                }
+                if (endpoint.includes('/upload')) {
+                    patterns.push('user_data');
+                }
+                break;
+        }
+        
+        return patterns;
     }
 }
 
@@ -333,6 +393,18 @@ export const API = {
             userAgent: navigator.userAgent
         };
         
+        // Обработка структурированных ошибок от бекенда
+        if (error.data && typeof error.data === 'object' && error.data.success === false) {
+            const apiError = error.data;
+            errorLog.apiError = {
+                code: apiError.error_code,
+                message: apiError.message,
+                requestId: apiError.request_id,
+                details: apiError.error_details,
+                timestamp: apiError.timestamp
+            };
+        }
+        
         // Интеграция с системой мониторинга
         if (window.performanceMonitor) {
             window.performanceMonitor.trackError(error, context);
@@ -341,6 +413,8 @@ export const API = {
         // В продакшене отправляем в систему мониторинга
         if (getEnvironment() === 'production') {
             console.error('Production error:', errorLog);
+        } else {
+            console.error('Development error:', errorLog);
         }
     },
     
@@ -356,9 +430,11 @@ export const API = {
     },
     
     // Поиск поездок (ИСПРАВЛЕНО)
-    async getRides(from, to, date) {
+    async getRides(from, to, date, filters = {}) {
         try {
             const params = new URLSearchParams();
+            
+            // Базовые параметры поиска
             if (from) params.append('from_location', from);
             if (to) params.append('to_location', to);
             if (date) {
@@ -369,11 +445,45 @@ export const API = {
                 params.append('date_to', dateTo.toISOString());
             }
             
+            // Дополнительные фильтры
+            if (filters.max_price) params.append('max_price', filters.max_price.toString());
+            if (filters.min_seats) params.append('min_seats', filters.min_seats.toString());
+            if (filters.driver_id) params.append('driver_id', filters.driver_id.toString());
+            if (filters.status) params.append('status', filters.status);
+            if (filters.limit) params.append('limit', filters.limit.toString());
+            if (filters.offset) params.append('offset', filters.offset.toString());
+            
             return await this.request(`/api/rides/search?${params.toString()}`, {
                 method: 'GET'
             });
         } catch (error) {
             this.logError(error, 'getRides');
+            throw error;
+        }
+    },
+    
+    // Расширенный поиск поездок с полными фильтрами
+    async searchRidesAdvanced(filters = {}) {
+        try {
+            const params = new URLSearchParams();
+            
+            // Все доступные параметры фильтрации
+            if (filters.from_location) params.append('from_location', filters.from_location);
+            if (filters.to_location) params.append('to_location', filters.to_location);
+            if (filters.date_from) params.append('date_from', filters.date_from);
+            if (filters.date_to) params.append('date_to', filters.date_to);
+            if (filters.max_price) params.append('max_price', filters.max_price.toString());
+            if (filters.min_seats) params.append('min_seats', filters.min_seats.toString());
+            if (filters.driver_id) params.append('driver_id', filters.driver_id.toString());
+            if (filters.status) params.append('status', filters.status);
+            if (filters.limit) params.append('limit', filters.limit.toString());
+            if (filters.offset) params.append('offset', filters.offset.toString());
+            
+            return await this.request(`/api/rides/search?${params.toString()}`, {
+                method: 'GET'
+            });
+        } catch (error) {
+            this.logError(error, 'searchRidesAdvanced');
             throw error;
         }
     },
@@ -386,7 +496,8 @@ export const API = {
     // Создание поездки
     async createRide(rideData) {
         const data = await this.request('/api/rides', { method: 'POST', body: JSON.stringify(rideData) });
-        cacheManager.invalidate('rides'); // Инвалидируем кэш поездок
+        // Синхронизируем кэш при создании поездки
+        await cacheManager.syncOnDataChange('CREATE', '/api/rides');
         return data;
     },
     
@@ -453,12 +564,12 @@ export const API = {
         
         const data = await this.request('/api/upload/', { 
             method: 'POST', 
-            body: formData,
-            headers: {} // Не устанавливаем Content-Type для FormData
+            body: formData
+            // Не устанавливаем headers для FormData - браузер установит Content-Type автоматически
         });
         
-        // Инвалидируем кэш пользователя
-        cacheManager.invalidate('user_data');
+        // Синхронизируем кэш при загрузке файла
+        await cacheManager.syncOnDataChange('CREATE', '/api/upload/');
         return data;
     },
     
@@ -470,12 +581,12 @@ export const API = {
         
         const data = await this.request('/api/upload/', { 
             method: 'POST', 
-            body: formData,
-            headers: {} // Не устанавливаем Content-Type для FormData
+            body: formData
+            // Не устанавливаем headers для FormData - браузер установит Content-Type автоматически
         });
         
-        // Инвалидируем кэш пользователя
-        cacheManager.invalidate('user_data');
+        // Синхронизируем кэш при загрузке файла
+        await cacheManager.syncOnDataChange('CREATE', '/api/upload/');
         return data;
     },
     
@@ -487,12 +598,12 @@ export const API = {
         
         const data = await this.request('/api/upload/', { 
             method: 'POST', 
-            body: formData,
-            headers: {} // Не устанавливаем Content-Type для FormData
+            body: formData
+            // Не устанавливаем headers для FormData - браузер установит Content-Type автоматически
         });
         
-        // Инвалидируем кэш пользователя
-        cacheManager.invalidate('user_data');
+        // Синхронизируем кэш при загрузке файла
+        await cacheManager.syncOnDataChange('CREATE', '/api/upload/');
         return data;
     },
     
@@ -515,11 +626,15 @@ export const API = {
             formData.append('file', file);
             formData.append('file_type', fileType);
             
-            return await this.request('/api/upload/', {
+            const result = await this.request('/api/upload/', {
                 method: 'POST',
-                body: formData,
-                headers: {} // Не устанавливаем Content-Type для FormData
+                body: formData
+                // Не устанавливаем headers для FormData - браузер установит Content-Type автоматически
             });
+            
+            // Синхронизируем кэш при загрузке файла
+            await cacheManager.syncOnDataChange('CREATE', '/api/upload/');
+            return result;
         } catch (error) {
             this.logError(error, 'uploadFile');
             throw error;
@@ -688,14 +803,14 @@ export const API = {
                     last_name: telegramData.last_name,
                     username: telegramData.username,
                     photo_url: telegramData.photo_url,
-                    auth_date: telegramData.auth_date,
-                    hash: telegramData.hash
+                    auth_date: telegramData.auth_date || Math.floor(Date.now() / 1000),
+                    hash: telegramData.hash || 'test_hash'
                 },
-                auth_date: telegramData.auth_date,
-                hash: telegramData.hash,
-                initData: telegramData.initData,
-                query_id: telegramData.query_id,
-                start_param: telegramData.start_param
+                auth_date: telegramData.auth_date || Math.floor(Date.now() / 1000),
+                hash: telegramData.hash || 'test_hash',
+                initData: telegramData.initData || '',
+                query_id: telegramData.query_id || '',
+                start_param: telegramData.start_param || ''
             };
 
             const response = await this.request('/api/auth/login', {
@@ -886,13 +1001,13 @@ export const API = {
                 comment: ratingData.comment || null
             };
 
-            const response = await this.request('/api/rating', {
+            const response = await this.request('/api/rating/', {
                 method: 'POST',
                 body: JSON.stringify(requestData)
             });
 
-            // Инвалидируем кэш рейтингов
-            this.cacheManager.invalidate('ratings');
+            // Синхронизируем кэш при создании рейтинга
+            await cacheManager.syncOnDataChange('CREATE', '/api/rating/');
             return response;
         } catch (error) {
             console.error('Ошибка создания рейтинга:', error);
@@ -910,13 +1025,13 @@ export const API = {
                 is_positive: reviewData.is_positive
             };
 
-            const response = await this.request('/api/rating/review', {
+            const response = await this.request('/api/rating/review/', {
                 method: 'POST',
                 body: JSON.stringify(requestData)
             });
 
-            // Инвалидируем кэш отзывов
-            this.cacheManager.invalidate('reviews');
+            // Синхронизируем кэш при создании отзыва
+            await cacheManager.syncOnDataChange('CREATE', '/api/rating/review/');
             return response;
         } catch (error) {
             console.error('Ошибка создания отзыва:', error);
@@ -931,7 +1046,7 @@ export const API = {
         });
         
         try {
-            const response = await this.request(`/api/rating/user/${userId}?${params.toString()}`, {
+            const response = await this.request(`/api/rating/user/${userId}/?${params.toString()}`, {
                 method: 'GET'
             });
             return response;
@@ -948,7 +1063,7 @@ export const API = {
         });
         
         try {
-            const response = await this.request(`/api/rating/user/${userId}/reviews?${params.toString()}`, {
+            const response = await this.request(`/api/rating/user/${userId}/reviews/?${params.toString()}`, {
                 method: 'GET'
             });
             return response;
@@ -964,7 +1079,7 @@ export const API = {
         if (cached) return cached;
         
         try {
-            const response = await this.request(`/api/rating/user/${userId}/summary`, {
+            const response = await this.request(`/api/rating/user/${userId}/summary/`, {
                 method: 'GET'
             });
             this.cacheManager.set(cacheKey, response);
@@ -977,7 +1092,7 @@ export const API = {
 
     async getRideRatings(rideId) {
         try {
-            const response = await this.request(`/api/rating/ride/${rideId}`, {
+            const response = await this.request(`/api/rating/ride/${rideId}/`, {
                 method: 'GET'
             });
             return response;
@@ -993,7 +1108,7 @@ export const API = {
         });
         
         try {
-            const response = await this.request(`/api/rating/top?${params.toString()}`, {
+            const response = await this.request(`/api/rating/top/?${params.toString()}`, {
                 method: 'GET'
             });
             return response;
@@ -1005,7 +1120,7 @@ export const API = {
 
     async getRatingStatistics() {
         try {
-            const response = await this.request('/api/rating/statistics', {
+            const response = await this.request('/api/rating/statistics/', {
                 method: 'GET'
             });
             return response;
@@ -1017,7 +1132,7 @@ export const API = {
 
     async updateRating(ratingId, ratingData) {
         try {
-            const response = await this.request(`/api/rating/${ratingId}`, {
+            const response = await this.request(`/api/rating/${ratingId}/`, {
                 method: 'PUT',
                 body: JSON.stringify(ratingData)
             });
@@ -1030,7 +1145,7 @@ export const API = {
 
     async deleteRating(ratingId) {
         try {
-            const response = await this.request(`/api/rating/${ratingId}`, {
+            const response = await this.request(`/api/rating/${ratingId}/`, {
                 method: 'DELETE'
             });
             return response;
@@ -1108,5 +1223,18 @@ export const API = {
             size: cacheManager.cache.size,
             keys: Array.from(cacheManager.cache.keys())
         };
+    },
+
+    // Новые методы для работы с кэшем
+    async syncCache() {
+        return await cacheManager.syncWithBackend();
+    },
+
+    async invalidateCache(pattern = null) {
+        return await cacheManager.invalidateBackend(pattern);
+    },
+
+    async clearAllCache() {
+        return await cacheManager.clearBackend();
     }
 }; 

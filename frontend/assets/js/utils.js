@@ -239,6 +239,75 @@ const Utils = {
     
     // Обработка ошибок API (улучшенная версия)
     handleApiError: (error, context = 'API') => {
+        // Обработка структурированных ошибок от бекенда
+        if (error.data && typeof error.data === 'object') {
+            const apiError = error.data;
+            
+            // Проверяем структуру ошибки от бекенда
+            if (apiError.success === false) {
+                // Это структурированная ошибка от бекенда
+                const errorMessage = apiError.message || 'Произошла ошибка';
+                const errorCode = apiError.error_code || 'UNKNOWN_ERROR';
+                const requestId = apiError.request_id;
+                
+                // Логируем детали ошибки
+                console.error(`API Error [${context}]:`, {
+                    code: errorCode,
+                    message: errorMessage,
+                    requestId: requestId,
+                    details: apiError.error_details,
+                    timestamp: apiError.timestamp
+                });
+                
+                // Показываем пользователю понятное сообщение
+                Utils.showNotification('Ошибка', errorMessage, 'error');
+                
+                // Специальная обработка для определенных типов ошибок
+                switch (errorCode) {
+                    case 'AUTH_ERROR':
+                        // Перенаправляем на страницу авторизации
+                        setTimeout(() => {
+                            if (window.router) {
+                                window.router.navigate('restricted');
+                            }
+                        }, 2000);
+                        break;
+                    case 'VALIDATION_ERROR':
+                        // Показываем ошибки валидации
+                        if (apiError.field_errors) {
+                            Object.entries(apiError.field_errors).forEach(([field, errors]) => {
+                                const fieldElement = document.getElementById(field);
+                                if (fieldElement && errors.length > 0) {
+                                    Utils.showFieldError(fieldElement, errors[0]);
+                                }
+                            });
+                        }
+                        break;
+                    case 'RATE_LIMIT_ERROR':
+                        // Показываем информацию о лимите запросов
+                        const retryAfter = apiError.retry_after || 60;
+                        Utils.showNotification(
+                            'Слишком много запросов', 
+                            `Попробуйте через ${retryAfter} секунд`, 
+                            'warning'
+                        );
+                        break;
+                    case 'NOT_FOUND':
+                        Utils.showNotification('Не найдено', errorMessage, 'warning');
+                        break;
+                    case 'PERMISSION_ERROR':
+                        Utils.showNotification('Доступ запрещен', errorMessage, 'error');
+                        break;
+                    default:
+                        // Для остальных ошибок показываем общее сообщение
+                        Utils.showNotification('Ошибка', errorMessage, 'error');
+                }
+                
+                return;
+            }
+        }
+        
+        // Fallback к стандартной обработке ошибок
         errorHandler.handleError(error, context);
     },
     
