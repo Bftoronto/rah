@@ -538,5 +538,8 @@ const RegistrationScreens = {
     driverInfo: DriverInfoScreen
 };
 
-// Экспортируем как именованный экспорт вместо default
+// Экспортируем как именованный экспорт
 export { RegistrationScreens };
+
+// Также экспортируем как default для совместимости
+export default RegistrationScreens;

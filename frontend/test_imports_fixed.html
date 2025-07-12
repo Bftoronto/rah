@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест исправленных импортов PAX</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <h1>Тест исправленных импортов PAX</h1>
+    <div id="results"></div>
+    
+    <script type="module">
+        const results = document.getElementById('results');
+        
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+        
+        addResult('Начинаем тестирование исправленных импортов...', 'info');
+        
+        try {
+            // Тест 1: Проверка Utils
+            addResult('Тест 1: Проверка Utils...', 'info');
+            const Utils = await import('./assets/js/utils.js');
+            if (Utils.default) {
+                addResult('✅ Utils импортирован успешно', 'success');
+            } else {
+                addResult('❌ Utils не импортирован', 'error');
+            }
+            
+            // Тест 2: Проверка API
+            addResult('Тест 2: Проверка API...', 'info');
+            const { API } = await import('./assets/js/api.js');
+            if (API) {
+                addResult('✅ API импортирован успешно', 'success');
+            } else {
+                addResult('❌ API не импортирован', 'error');
+            }
+            
+            // Тест 3: Проверка stateManager
+            addResult('Тест 3: Проверка stateManager...', 'info');
+            const { stateManager } = await import('./assets/js/state.js');
+            if (stateManager) {
+                addResult('✅ stateManager импортирован успешно', 'success');
+            } else {
+                addResult('❌ stateManager не импортирован', 'error');
+            }
+            
+            // Тест 4: Проверка screens
+            addResult('Тест 4: Проверка screens...', 'info');
+            const screensModule = await import('./assets/js/screens/index.js');
+            if (screensModule.default) {
+                addResult('✅ screens импортирован успешно', 'success');
+            } else {
+                addResult('❌ screens не импортирован', 'error');
+            }
+            
+            // Тест 5: Проверка getAllScreens
+            addResult('Тест 5: Проверка getAllScreens...', 'info');
+            const { getAllScreens } = await import('./assets/js/screens/index.js');
+            if (typeof getAllScreens === 'function') {
+                addResult('✅ getAllScreens доступен', 'success');
+            } else {
+                addResult('❌ getAllScreens недоступен', 'error');
+            }
+            
+            // Тест 6: Проверка router
+            addResult('Тест 6: Проверка router...', 'info');
+            const { router } = await import('./assets/js/router.js');
+            if (router && typeof router.navigate === 'function') {
+                addResult('✅ router работает корректно', 'success');
+            } else {
+                addResult('❌ router не работает', 'error');
+            }
+            
+            // Тест 7: Проверка app
+            addResult('Тест 7: Проверка app...', 'info');
+            const app = await import('./assets/js/app.js');
+            if (app.default && typeof app.default.init === 'function') {
+                addResult('✅ app работает корректно', 'success');
+            } else {
+                addResult('❌ app не работает', 'error');
+            }
+            
+            addResult('🎉 Все импорты работают корректно!', 'success');
+            
+        } catch (error) {
+            addResult(`❌ Ошибка тестирования: ${error.message}`, 'error');
+            console.error('Детали ошибки:', error);
+        }
+    </script>
+</body>
+</html> 

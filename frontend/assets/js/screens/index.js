@@ -59,11 +59,13 @@ const screens = {
 // Динамический импорт экранов регистрации для избежания циклических зависимостей
 async function getRegistrationScreens() {
     try {
-        const { RegistrationScreens } = await import('./registration.js');
+        const registrationModule = await import('./registration.js');
+        // Проверяем оба варианта экспорта
+        const screens = registrationModule.RegistrationScreens || registrationModule.default;
         return {
-            privacyPolicy: RegistrationScreens.privacyPolicy,
-            basicInfo: RegistrationScreens.basicInfo,
-            driverInfo: RegistrationScreens.driverInfo
+            privacyPolicy: screens.privacyPolicy,
+            basicInfo: screens.basicInfo,
+            driverInfo: screens.driverInfo
         };
     } catch (error) {
         console.error('Ошибка загрузки экранов регистрации:', error);
@@ -77,4 +79,5 @@ export async function getAllScreens() {
     return { ...screens, ...registrationScreens };
 }
 
-export default screens; 
+// Экспортируем как именованный экспорт вместо default
+export { screens as default }; 
