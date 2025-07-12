@@ -58,8 +58,8 @@
             
             // Тест 4: Проверка screens
             addResult('Тест 4: Проверка screens...', 'info');
-            const screensModule = await import('./assets/js/screens/index.js');
-            if (screensModule.default) {
+            const { screens } = await import('./assets/js/screens/index.js');
+            if (screens) {
                 addResult('✅ screens импортирован успешно', 'success');
             } else {
                 addResult('❌ screens не импортирован', 'error');
